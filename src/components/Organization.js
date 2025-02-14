@@ -1,197 +1,175 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { Typography, Box, Paper } from '@material-ui/core';
-import ReactECharts from 'echarts-for-react';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
     padding: theme.spacing(3),
+    backgroundColor: '#1e1e1e',
+    minHeight: 'calc(100vh - 64px)',
+    color: '#fff',
   },
   title: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(4),
+    fontWeight: 500,
   },
-  chartContainer: {
-    padding: theme.spacing(3),
-    height: 'calc(100vh - 250px)',
-    backgroundColor: theme.palette.background.paper,
+  mainContainer: {
+    backgroundColor: '#2d2d2d',
     borderRadius: theme.shape.borderRadius,
-    boxShadow: theme.shadows[1],
+    padding: theme.spacing(2),
+    display: 'flex',
+    gap: theme.spacing(2),
+    overflowX: 'auto',
   },
-  chart: {
-    height: '100%',
+  column: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1),
+    minWidth: '120px',
+  },
+  department: {
+    padding: theme.spacing(1.5),
+    backgroundColor: '#404040',
+    borderRadius: theme.shape.borderRadius,
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    color: '#fff',
+    fontWeight: 500,
+    marginBottom: theme.spacing(1),
+  },
+  teamsContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: theme.spacing(1),
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  team: {
+    padding: theme.spacing(1),
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    fontWeight: 500,
+    minHeight: '120px',
+    width: '40px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    writingMode: 'vertical-rl',
+    textOrientation: 'mixed',
+    transform: 'rotate(180deg)',
+    whiteSpace: 'nowrap',
+    borderRadius: theme.shape.borderRadius,
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'rotate(180deg) translateY(-4px)',
+    },
+  },
+  // 平台服务层样式
+  platformTeam: {
+    backgroundColor: '#009688',
+    '&:hover': {
+      backgroundColor: '#00897b',
+    },
+  },
+  // 数据分析层样式
+  analyticsTeam: {
+    backgroundColor: '#4caf50',
+    '&:hover': {
+      backgroundColor: '#43a047',
+    },
+  },
+  // 监控层样式
+  monitoringTeam: {
+    backgroundColor: '#2196f3',
+    '&:hover': {
+      backgroundColor: '#1e88e5',
+    },
   },
 }));
 
 function Organization() {
   const classes = useStyles();
 
-  const data = {
-    name: 'CDP Organization',
-    children: [
-      {
-        name: 'Engineering',
-        value: 40,
-        children: [
-          {
-            name: 'Backend',
-            value: 15,
-            children: [
-              { name: 'API Team', value: 8 },
-              { name: 'Database Team', value: 7 },
-            ],
-          },
-          {
-            name: 'Frontend',
-            value: 12,
-            children: [
-              { name: 'UI Team', value: 6 },
-              { name: 'UX Team', value: 6 },
-            ],
-          },
-          {
-            name: 'DevOps',
-            value: 13,
-            children: [
-              { name: 'Infrastructure', value: 7 },
-              { name: 'CI/CD', value: 6 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Product',
-        value: 25,
-        children: [
-          {
-            name: 'Product Management',
-            value: 15,
-            children: [
-              { name: 'Strategy', value: 8 },
-              { name: 'Analytics', value: 7 },
-            ],
-          },
-          {
-            name: 'Design',
-            value: 10,
-            children: [
-              { name: 'Product Design', value: 5 },
-              { name: 'Research', value: 5 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Data Science',
-        value: 20,
-        children: [
-          {
-            name: 'Machine Learning',
-            value: 12,
-            children: [
-              { name: 'ML Engineers', value: 7 },
-              { name: 'Research Scientists', value: 5 },
-            ],
-          },
-          {
-            name: 'Analytics',
-            value: 8,
-            children: [
-              { name: 'Data Analysts', value: 4 },
-              { name: 'BI Engineers', value: 4 },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-
-  const option = {
-    tooltip: {
-      formatter: function (info) {
-        const value = info.value;
-        const treePathInfo = info.treePathInfo;
-        const treePath = [];
-        
-        for (let i = 1; i < treePathInfo.length; i++) {
-          treePath.push(treePathInfo[i].name);
-        }
-        
-        return [
-          '<div style="font-size:16px; padding:4px">',
-          treePath.join(' > '),
-          '</div>',
-          '<div style="padding:4px">',
-          'Team Size: ' + value,
-          '</div>'
-        ].join('');
-      },
+  const departmentTeams = [
+    {
+      department: 'Process Banking',
+      teams: [
+        { name: 'Security as a Platform', type: 'platformTeam' }
+      ]
     },
-    series: [
-      {
-        type: 'treemap',
-        data: [data],
-        leafDepth: 2,
-        levels: [
-          {
-            itemStyle: {
-              borderColor: '#fff',
-              borderWidth: 2,
-              gapWidth: 2,
-            },
-          },
-          {
-            colorSaturation: [0.3, 0.6],
-            itemStyle: {
-              borderColorSaturation: 0.7,
-              gapWidth: 2,
-              borderWidth: 2,
-            },
-          },
-          {
-            colorSaturation: [0.3, 0.6],
-            itemStyle: {
-              borderColorSaturation: 0.7,
-              gapWidth: 1,
-              borderWidth: 1,
-            },
-          },
-        ],
-        label: {
-          show: true,
-          formatter: '{b}',
-          fontSize: 14,
-        },
-        upperLabel: {
-          show: true,
-          height: 30,
-          fontSize: 14,
-        },
-        breadcrumb: {
-          show: true,
-          height: 30,
-          bottom: 'bottom',
-          itemStyle: {
-            textStyle: {
-              fontSize: 14,
-            },
-          },
-        },
-      },
-    ],
-  };
+    {
+      department: 'Transfer',
+      teams: [
+        { name: 'Risk & KYC', type: 'platformTeam' }
+      ]
+    },
+    {
+      department: 'Payment',
+      teams: [
+        { name: 'Credit Decisioning Systems', type: 'platformTeam' }
+      ]
+    },
+    {
+      department: 'KYC',
+      teams: [
+        { name: 'KYC Operations Utility', type: 'analyticsTeam' },
+        { name: 'KYC Analytics', type: 'analyticsTeam' }
+      ]
+    },
+    {
+      department: 'Monitoring',
+      teams: [
+        { name: 'Monitoring', type: 'monitoringTeam' },
+        { name: 'Fraud Detection', type: 'monitoringTeam' }
+      ]
+    },
+    {
+      department: 'Finance',
+      teams: [
+        { name: 'Financial Resource Management', type: 'analyticsTeam' }
+      ]
+    },
+    {
+      department: 'Analytics',
+      teams: [
+        { name: 'Process Analytics', type: 'analyticsTeam' },
+        { name: 'Analytics Foundation Enabler', type: 'analyticsTeam' },
+        { name: 'MRA Supervision & NFR', type: 'analyticsTeam' }
+      ]
+    },
+    {
+      department: 'Security',
+      teams: [
+        { name: 'Test & Scenario Hub', type: 'analyticsTeam' }
+      ]
+    }
+  ];
 
   return (
     <div className={classes.root}>
       <Typography variant="h5" component="h1" className={classes.title}>
-        Organization Structure
+        FSA Values Streams
       </Typography>
-      <Paper className={classes.chartContainer}>
-        <ReactECharts
-          option={option}
-          className={classes.chart}
-          opts={{ renderer: 'canvas' }}
-        />
+      <Paper className={classes.mainContainer}>
+        {departmentTeams.map((item, index) => (
+          <Box key={index} className={classes.column}>
+            <Paper className={classes.department}>
+              {item.department}
+            </Paper>
+            <Box className={classes.teamsContainer}>
+              {item.teams.map((team, teamIndex) => (
+                <Paper
+                  key={teamIndex}
+                  className={`${classes.team} ${classes[team.type]}`}
+                >
+                  {team.name}
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+        ))}
       </Paper>
     </div>
   );
