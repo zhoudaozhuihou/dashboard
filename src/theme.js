@@ -2,19 +2,20 @@ import { createTheme } from '@material-ui/core/styles';
 
 const theme = createTheme({
   palette: {
+    type: 'dark',
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#06b6d4',
     },
     secondary: {
-      main: '#dc004e',
-      light: '#ff4081',
-      dark: '#c51162',
+      main: '#10b981',
     },
     background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
+      default: '#1e1e1e',
+      paper: '#2d2d2d',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: 'rgba(255, 255, 255, 0.7)',
     },
   },
   typography: {
@@ -27,33 +28,19 @@ const theme = createTheme({
       'Arial',
       'sans-serif',
     ].join(','),
-    h6: {
-      fontWeight: 500,
-    },
   },
   shape: {
     borderRadius: 8,
   },
+  props: {
+    MuiButton: {
+      disableElevation: true,
+    },
+  },
   overrides: {
     MuiPaper: {
-      rounded: {
-        borderRadius: 8,
-      },
-      elevation1: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-      },
-    },
-    MuiButton: {
       root: {
-        textTransform: 'none',
-        borderRadius: 8,
-      },
-    },
-    MuiTab: {
-      root: {
-        textTransform: 'none',
-        minWidth: 120,
-        fontWeight: 500,
+        backgroundColor: '#2d2d2d',
       },
     },
   },

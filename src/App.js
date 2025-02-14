@@ -1,33 +1,34 @@
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Tabs, Tab, Box, Typography } from '@material-ui/core';
 import { Switch, Route, useHistory, useLocation } from 'react-router-dom';
+import { makeStyles } from '@material-ui/core/styles';
+import { AppBar, Toolbar, Typography, IconButton, Tabs, Tab } from '@material-ui/core';
+import { Menu as MenuIcon } from '@material-ui/icons';
 import Overview from './components/Overview';
-import Organization from './components/Organization';
 import DataFlow from './components/DataFlow';
+import Organization from './components/Organization';
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1,
-    backgroundColor: theme.palette.background.default,
+    display: 'flex',
+    flexDirection: 'column',
     minHeight: '100vh',
   },
-  header: {
-    padding: theme.spacing(2),
-    display: 'flex',
-    alignItems: 'center',
+  appBar: {
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
   },
+  toolbar: {
+    justifyContent: 'space-between',
+  },
+  menuButton: {
+    marginRight: theme.spacing(2),
+  },
   title: {
     flexGrow: 1,
-    fontWeight: 500,
-    color: theme.palette.primary.main,
   },
   content: {
-    padding: theme.spacing(3),
-    height: 'calc(100vh - 128px)',
-    overflow: 'auto',
+    flexGrow: 1,
+    backgroundColor: theme.palette.background.default,
   },
   tabs: {
     backgroundColor: theme.palette.background.paper,
@@ -35,44 +36,61 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const routes = [
+  { path: '/', label: 'Overview', component: Overview },
+  { path: '/data-flow', label: 'Data Flow', component: DataFlow },
+  { path: '/organization', label: 'Organization', component: Organization },
+];
+
 function App() {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
-  
-  const handleTabChange = (_, newValue) => {
-    history.push(newValue);
+
+  const handleTabChange = (_, newPath) => {
+    history.push(newPath);
   };
 
   return (
     <div className={classes.root}>
-      <Box className={classes.header}>
-        <Typography variant="h6" className={classes.title}>
-          CDP Analytics Dashboard
-        </Typography>
-      </Box>
-      <AppBar position="static" color="default" elevation={0}>
-        <Tabs
-          value={location.pathname}
-          onChange={handleTabChange}
-          aria-label="dashboard navigation"
-          indicatorColor="primary"
-          textColor="primary"
-          className={classes.tabs}
-        >
-          <Tab label="Overview" value="/" />
-          <Tab label="Organization" value="/organization" />
-          <Tab label="Data Flow" value="/data-flow" />
-        </Tabs>
+      <AppBar position="static" className={classes.appBar} elevation={0}>
+        <Toolbar className={classes.toolbar}>
+          <IconButton
+            edge="start"
+            className={classes.menuButton}
+            color="inherit"
+            aria-label="menu"
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" className={classes.title}>
+            Analytics Dashboard
+          </Typography>
+        </Toolbar>
       </AppBar>
-      
-      <Box className={classes.content}>
+      <Tabs
+        value={location.pathname}
+        onChange={handleTabChange}
+        indicatorColor="primary"
+        textColor="primary"
+        className={classes.tabs}
+      >
+        {routes.map((route) => (
+          <Tab key={route.path} label={route.label} value={route.path} />
+        ))}
+      </Tabs>
+      <main className={classes.content}>
         <Switch>
-          <Route exact path="/" component={Overview} />
-          <Route path="/organization" component={Organization} />
-          <Route path="/data-flow" component={DataFlow} />
+          {routes.map(({ path, component: Component }) => (
+            <Route 
+              key={path} 
+              exact={path === '/'} 
+              path={path} 
+              component={Component} 
+            />
+          ))}
         </Switch>
-      </Box>
+      </main>
     </div>
   );
 }

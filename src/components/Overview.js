@@ -1,148 +1,80 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import {
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  LinearProgress,
-} from '@material-ui/core';
-import {
-  Timeline,
-  People,
-  Storage,
-  TrendingUp,
-} from '@material-ui/icons';
+import { Grid, Paper, Typography, Box } from '@material-ui/core';
+import { useSelector } from 'react-redux';
+import { selectKpiData } from '../features/dashboard/dashboardSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
     padding: theme.spacing(3),
+    backgroundColor: theme.palette.background.default,
+    minHeight: 'calc(100vh - 128px)',
   },
-  card: {
+  paper: {
+    padding: theme.spacing(3),
     height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
     transition: 'transform 0.2s ease-in-out',
     '&:hover': {
       transform: 'translateY(-4px)',
     },
   },
-  cardContent: {
-    flexGrow: 1,
-  },
   title: {
-    fontSize: '1.1rem',
-    fontWeight: 500,
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    color: theme.palette.text.primary,
   },
-  iconWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: theme.spacing(2),
-  },
-  icon: {
-    marginRight: theme.spacing(1),
-    color: theme.palette.primary.main,
-  },
-  value: {
+  kpiValue: {
     fontSize: '2rem',
     fontWeight: 500,
-    color: theme.palette.text.primary,
+    color: theme.palette.primary.main,
     marginBottom: theme.spacing(1),
   },
-  progress: {
-    height: 8,
-    borderRadius: 4,
-    marginTop: theme.spacing(2),
-  },
-  progressLabel: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing(0.5),
+  kpiLabel: {
     color: theme.palette.text.secondary,
-    fontSize: '0.875rem',
+  },
+  kpiChange: {
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: theme.spacing(1),
+    color: theme.palette.success.main,
+  },
+  negative: {
+    color: theme.palette.error.main,
   },
 }));
 
-const StatCard = ({ title, value, icon: Icon, progress, total }) => {
-  const classes = useStyles();
-  
-  return (
-    <Card className={classes.card}>
-      <CardContent className={classes.cardContent}>
-        <div className={classes.iconWrapper}>
-          <Icon className={classes.icon} />
-          <Typography color="textSecondary" gutterBottom>
-            {title}
-          </Typography>
-        </div>
-        <Typography className={classes.value} component="h2">
-          {value}
-        </Typography>
-        {progress !== undefined && (
-          <>
-            <LinearProgress
-              className={classes.progress}
-              variant="determinate"
-              value={(progress / total) * 100}
-            />
-            <div className={classes.progressLabel}>
-              <span>{progress.toLocaleString()}</span>
-              <span>{total.toLocaleString()}</span>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
 function Overview() {
   const classes = useStyles();
-
-  const stats = [
-    {
-      title: 'Active Users',
-      value: '45,021',
-      icon: People,
-      progress: 45021,
-      total: 50000,
-    },
-    {
-      title: 'Data Sources',
-      value: '8',
-      icon: Storage,
-    },
-    {
-      title: 'Events Today',
-      value: '2.1M',
-      icon: Timeline,
-      progress: 2100000,
-      total: 3000000,
-    },
-    {
-      title: 'Conversion Rate',
-      value: '3.2%',
-      icon: TrendingUp,
-      progress: 32,
-      total: 100,
-    },
-  ];
+  const kpiData = useSelector(selectKpiData);
 
   return (
     <div className={classes.root}>
-      <Box mb={3}>
-        <Typography variant="h5" component="h1">
-          Dashboard Overview
-        </Typography>
-      </Box>
+      <Typography variant="h5" component="h1" className={classes.title}>
+        Performance Overview
+      </Typography>
       <Grid container spacing={3}>
-        {stats.map((stat, index) => (
+        {kpiData.map((kpi, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
-            <StatCard {...stat} />
+            <Paper className={classes.paper} elevation={0}>
+              <Box>
+                <Typography variant="h4" className={classes.kpiValue}>
+                  {typeof kpi.value === 'number' 
+                    ? kpi.value.toLocaleString()
+                    : kpi.value}
+                </Typography>
+                <Typography variant="body2" className={classes.kpiLabel}>
+                  {kpi.label}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  className={`${classes.kpiChange} ${kpi.change < 0 ? classes.negative : ''}`}
+                >
+                  {kpi.change > 0 ? '+' : ''}{kpi.change}% vs last month
+                </Typography>
+              </Box>
+            </Paper>
           </Grid>
         ))}
       </Grid>
