@@ -9,23 +9,29 @@ import DataFlow from './components/DataFlow';
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.background.default,
+    minHeight: '100vh',
   },
   header: {
     padding: theme.spacing(2),
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderBottom: '1px solid #e0e0e0',
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   title: {
     flexGrow: 1,
     fontWeight: 500,
+    color: theme.palette.primary.main,
   },
   content: {
     padding: theme.spacing(3),
     height: 'calc(100vh - 128px)',
     overflow: 'auto',
+  },
+  tabs: {
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
 }));
 
@@ -42,16 +48,17 @@ function App() {
     <div className={classes.root}>
       <Box className={classes.header}>
         <Typography variant="h6" className={classes.title}>
-          CDP Dashboard
+          CDP Analytics Dashboard
         </Typography>
       </Box>
-      <AppBar position="static" color="default">
+      <AppBar position="static" color="default" elevation={0}>
         <Tabs
           value={location.pathname}
           onChange={handleTabChange}
           aria-label="dashboard navigation"
           indicatorColor="primary"
           textColor="primary"
+          className={classes.tabs}
         >
           <Tab label="Overview" value="/" />
           <Tab label="Organization" value="/organization" />

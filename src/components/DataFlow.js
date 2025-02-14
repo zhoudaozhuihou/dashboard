@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { Typography, IconButton, Paper, Fade } from '@material-ui/core';
+import { Typography, Box, Paper, IconButton, Fade } from '@material-ui/core';
 import { ArrowBack } from '@material-ui/icons';
 import ReactECharts from 'echarts-for-react';
 
 const useStyles = makeStyles((theme) => ({
   root: {
+    flexGrow: 1,
     padding: theme.spacing(3),
   },
   header: {
@@ -48,204 +49,68 @@ function DataFlow() {
 
   const mainGraphData = {
     nodes: [
-      { 
-        id: 'cdp', 
-        name: 'Customer Data Platform',
-        symbolSize: 80,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#26C6DA',
-          borderColor: '#fff',
-          borderWidth: 2,
-          shadowColor: 'rgba(0, 0, 0, 0.2)',
-          shadowBlur: 10,
-        }
-      },
-      // Input nodes (blue)
-      { 
-        id: 'crm', 
-        name: 'CRM System',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#5C6BC0',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      { 
-        id: 'web', 
-        name: 'Website Analytics',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#5C6BC0',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      { 
-        id: 'mobile', 
-        name: 'Mobile App',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#5C6BC0',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      { 
-        id: 'email', 
-        name: 'Email Platform',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#5C6BC0',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      // Output nodes (green)
-      { 
-        id: 'marketing', 
-        name: 'Marketing Automation',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#66BB6A',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      { 
-        id: 'analytics', 
-        name: 'Analytics Platform',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#66BB6A',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      },
-      { 
-        id: 'personalization', 
-        name: 'Personalization Engine',
-        symbolSize: 50,
-        symbol: 'circle',
-        itemStyle: { 
-          color: '#66BB6A',
-          borderColor: '#fff',
-          borderWidth: 2,
-        }
-      }
+      // Source Systems (Level 1)
+      { name: 'CRM System', value: 5000 },
+      { name: 'Website Analytics', value: 3000 },
+      { name: 'Mobile App', value: 4000 },
+      { name: 'Email Platform', value: 2000 },
+      { name: 'Social Media', value: 1500 },
+      
+      // CDP (Level 2)
+      { name: 'Customer Data Platform', value: 15500 },
+      
+      // Downstream Systems (Level 3)
+      { name: 'Marketing Automation', value: 6000 },
+      { name: 'Analytics Platform', value: 5000 },
+      { name: 'Personalization Engine', value: 4500 }
     ],
     links: [
-      { 
-        source: 'crm', 
-        target: 'cdp',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'web', 
-        target: 'cdp',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'mobile', 
-        target: 'cdp',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'email', 
-        target: 'cdp',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'cdp', 
-        target: 'marketing',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'cdp', 
-        target: 'analytics',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      },
-      { 
-        source: 'cdp', 
-        target: 'personalization',
-        lineStyle: {
-          width: 2,
-          curveness: 0.2,
-          color: '#999',
-        }
-      }
+      // Source Systems to CDP
+      { source: 'CRM System', target: 'Customer Data Platform', value: 5000 },
+      { source: 'Website Analytics', target: 'Customer Data Platform', value: 3000 },
+      { source: 'Mobile App', target: 'Customer Data Platform', value: 4000 },
+      { source: 'Email Platform', target: 'Customer Data Platform', value: 2000 },
+      { source: 'Social Media', target: 'Customer Data Platform', value: 1500 },
+      
+      // CDP to Downstream Systems
+      { source: 'Customer Data Platform', target: 'Marketing Automation', value: 6000 },
+      { source: 'Customer Data Platform', target: 'Analytics Platform', value: 5000 },
+      { source: 'Customer Data Platform', target: 'Personalization Engine', value: 4500 }
     ]
   };
 
   const detailGraphData = {
     nodes: [
-      { 
-        id: 'source1', 
-        name: 'Source 1',
-        symbolSize: 30,
-        itemStyle: { color: '#5C6BC0' }
-      },
-      { 
-        id: 'source2', 
-        name: 'Source 2',
-        symbolSize: 30,
-        itemStyle: { color: '#5C6BC0' }
-      },
-      { 
-        id: 'processing', 
-        name: 'Data Processing',
-        symbolSize: 40,
-        itemStyle: { color: '#26C6DA' }
-      },
-      { 
-        id: 'output', 
-        name: 'Marketing Output',
-        symbolSize: 30,
-        itemStyle: { color: '#66BB6A' }
-      }
+      // Input Layer
+      { name: 'User Profiles', value: 2000 },
+      { name: 'Behavioral Data', value: 1500 },
+      { name: 'Transaction History', value: 1000 },
+      
+      // CDP Layer
+      { name: 'Customer Data Platform', value: 4500 },
+      
+      // Output Layer
+      { name: 'Campaign Targeting', value: 1800 },
+      { name: 'Journey Orchestration', value: 1400 },
+      { name: 'Performance Analytics', value: 1300 }
     ],
     links: [
-      { source: 'source1', target: 'processing' },
-      { source: 'source2', target: 'processing' },
-      { source: 'processing', target: 'output' }
+      // Input to CDP
+      { source: 'User Profiles', target: 'Customer Data Platform', value: 2000 },
+      { source: 'Behavioral Data', target: 'Customer Data Platform', value: 1500 },
+      { source: 'Transaction History', target: 'Customer Data Platform', value: 1000 },
+      
+      // CDP to Output
+      { source: 'Customer Data Platform', target: 'Campaign Targeting', value: 1800 },
+      { source: 'Customer Data Platform', target: 'Journey Orchestration', value: 1400 },
+      { source: 'Customer Data Platform', target: 'Performance Analytics', value: 1300 }
     ]
   };
 
-  const getChartOption = (data) => ({
+  const getMainChartOption = (data) => ({
     tooltip: {
       trigger: 'item',
-      formatter: '{b}',
+      triggerOn: 'mousemove',
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: '#ccc',
       borderWidth: 1,
@@ -253,56 +118,180 @@ function DataFlow() {
       textStyle: {
         color: '#333',
       },
-      extraCssText: 'box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);',
+      formatter: function(params) {
+        const value = params.value || 0;
+        return [
+          params.name,
+          'Flow: ' + value.toLocaleString() + ' records/hour'
+        ].join('<br/>');
+      }
     },
-    animationDurationUpdate: 1500,
-    animationEasingUpdate: 'quinticInOut',
+    grid: {
+      left: '5%',
+      right: '5%',
+      top: '5%',
+      bottom: '5%',
+      containLabel: true
+    },
     series: [{
       type: 'graph',
-      layout: 'force',
-      data: data.nodes,
-      links: data.links,
-      roam: true,
-      draggable: true,
-      label: {
-        show: true,
-        position: 'right',
-        formatter: '{b}',
-        fontSize: 12,
-        fontWeight: 500,
-        color: '#666',
-      },
-      edgeSymbol: ['circle', 'arrow'],
-      edgeSymbolSize: [4, 8],
-      lineStyle: {
-        color: '#ccc',
-        curveness: 0.3,
-        width: 2,
-      },
+      layout: 'none',
+      data: data.nodes.map(node => {
+        let x, category;
+        if (node.name === 'Customer Data Platform') {
+          x = 0.5;
+          category = 1;
+        } else if (['Marketing Automation', 'Analytics Platform', 'Personalization Engine'].includes(node.name)) {
+          x = 0.8;
+          category = 2;
+        } else {
+          x = 0.2;
+          category = 0;
+        }
+        
+        let y;
+        if (category === 1) {
+          y = 0.5;
+        } else if (category === 0) {
+          const sourceNodes = data.nodes.filter(n => !['Customer Data Platform', 'Marketing Automation', 'Analytics Platform', 'Personalization Engine'].includes(n.name));
+          const index = sourceNodes.findIndex(n => n.name === node.name);
+          y = (index + 1) / (sourceNodes.length + 1);
+        } else {
+          const targetNodes = data.nodes.filter(n => ['Marketing Automation', 'Analytics Platform', 'Personalization Engine'].includes(n.name));
+          const index = targetNodes.findIndex(n => n.name === node.name);
+          y = (index + 1) / (targetNodes.length + 1);
+        }
+
+        return {
+          ...node,
+          x: x * 100,
+          y: y * 100,
+          // 修改节点大小计算方式，使面积与数据大小成正比
+          symbolSize: Math.sqrt(node.value) * 0.3,
+          symbol: 'circle',
+          category: category,
+          itemStyle: {
+            color: category === 1 ? '#2980b9' : 
+                   category === 2 ? '#e056fd' : '#58B19F',
+            borderColor: '#fff',
+            borderWidth: 2,
+            shadowColor: 'rgba(0, 0, 0, 0.2)',
+            shadowBlur: 10
+          },
+          label: {
+            show: true,
+            position: category === 0 ? 'left' : category === 2 ? 'right' : 'bottom',
+            distance: category === 1 ? 5 : 0,
+            formatter: '{b}',
+            fontSize: 12,
+            color: '#555'
+          }
+        };
+      }),
+      links: data.links.map(link => ({
+        ...link,
+        lineStyle: {
+          width: Math.sqrt(link.value) * 0.15,  // 增强连线粗细
+          color: 'source',
+          opacity: 0.6,
+          curveness: 0.2
+        }
+      })),
+      categories: [
+        { name: 'Source Systems' },
+        { name: 'CDP' },
+        { name: 'Downstream' }
+      ],
       emphasis: {
         focus: 'adjacency',
         lineStyle: {
-          width: 4,
-          color: '#1976d2',
-        },
-        label: {
-          color: '#1976d2',
-        },
+          width: 10
+        }
       },
-      force: {
-        repulsion: 350,
-        edgeLength: 200,
-        gravity: 0.1,
-      },
+      roam: true,
+      draggable: false,
       animation: true,
       animationDuration: 1500,
-      animationEasing: 'cubicInOut',
+      animationEasingUpdate: 'quinticInOut'
+    }]
+  });
+
+  const getDetailChartOption = (data) => ({
+    tooltip: {
+      trigger: 'item',
+      triggerOn: 'mousemove',
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      borderColor: '#ccc',
+      borderWidth: 1,
+      padding: [10, 15],
+      textStyle: {
+        color: '#333',
+      },
+      formatter: function(params) {
+        const value = params.value || 0;
+        return [
+          params.name,
+          'Flow: ' + value.toLocaleString() + ' records/hour'
+        ].join('<br/>');
+      }
+    },
+    series: [{
+      type: 'sankey',
+      data: data.nodes,
+      links: data.links,
+      emphasis: {
+        focus: 'adjacency'
+      },
+      levels: [
+        {
+          depth: 0,
+          itemStyle: {
+            color: '#58B19F'
+          },
+          lineStyle: {
+            color: 'source',
+            opacity: 0.6
+          }
+        },
+        {
+          depth: 1,
+          itemStyle: {
+            color: '#2980b9'
+          },
+          lineStyle: {
+            color: 'source',
+            opacity: 0.6
+          }
+        },
+        {
+          depth: 2,
+          itemStyle: {
+            color: '#e056fd'
+          }
+        }
+      ],
+      lineStyle: {
+        curveness: 0.5,
+        opacity: 0.6
+      },
+      itemStyle: {
+        borderWidth: 1,
+        borderColor: '#fff'
+      },
+      label: {
+        position: 'right',
+        fontSize: 12,
+        color: '#555'
+      }
     }]
   });
 
   const handleChartClick = (params) => {
-    if (params.dataType === 'node' && params.data.itemStyle.color === '#66BB6A') {
-      setSelectedNode(params.data);
+    if (params.dataType === 'node' && !selectedNode) {
+      const outputNodes = ['Marketing Automation', 'Analytics Platform', 'Personalization Engine'];
+      if (outputNodes.includes(params.name)) {
+        setSelectedNode(params.name);
+      }
     }
   };
 
@@ -325,15 +314,15 @@ function DataFlow() {
               </IconButton>
               <div className={classes.header}>
                 <Typography className={classes.title}>
-                  Data Flow Analysis: {selectedNode.name}
+                  Detailed Flow Analysis: {selectedNode}
                 </Typography>
                 <Typography className={classes.subtitle}>
-                  Showing detailed data flow from source systems through CDP
+                  Showing detailed data processing flow
                 </Typography>
               </div>
               <Paper className={classes.chartContainer}>
                 <ReactECharts
-                  option={getChartOption(detailGraphData)}
+                  option={getDetailChartOption(detailGraphData)}
                   className={classes.chart}
                   onEvents={{
                     click: handleChartClick
@@ -349,12 +338,12 @@ function DataFlow() {
                   CDP Data Flow Overview
                 </Typography>
                 <Typography className={classes.subtitle}>
-                  Click on any downstream system to view detailed data flow
+                  Click on any downstream system to view detailed flow
                 </Typography>
               </div>
               <Paper className={classes.chartContainer}>
                 <ReactECharts
-                  option={getChartOption(mainGraphData)}
+                  option={getMainChartOption(mainGraphData)}
                   className={classes.chart}
                   onEvents={{
                     click: handleChartClick

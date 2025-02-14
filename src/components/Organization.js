@@ -1,92 +1,106 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { Paper, InputBase, IconButton } from '@material-ui/core';
-import { Search as SearchIcon } from '@material-ui/icons';
+import { Typography, Box, Paper } from '@material-ui/core';
 import ReactECharts from 'echarts-for-react';
 
 const useStyles = makeStyles((theme) => ({
   root: {
+    flexGrow: 1,
     padding: theme.spacing(3),
   },
-  searchBar: {
-    padding: '2px 4px',
-    display: 'flex',
-    alignItems: 'center',
-    width: 400,
+  title: {
     marginBottom: theme.spacing(3),
   },
-  input: {
-    marginLeft: theme.spacing(1),
-    flex: 1,
-  },
-  iconButton: {
-    padding: 10,
+  chartContainer: {
+    padding: theme.spacing(3),
+    height: 'calc(100vh - 250px)',
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[1],
   },
   chart: {
-    height: 'calc(100vh - 250px)',
-    minHeight: '500px',
+    height: '100%',
   },
 }));
 
 function Organization() {
   const classes = useStyles();
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const departmentData = {
-    name: 'Departments',
+  const data = {
+    name: 'CDP Organization',
     children: [
       {
-        name: 'Backend',
-        value: 300,
-        itemStyle: { color: '#26C6DA' },
+        name: 'Engineering',
+        value: 40,
         children: [
-          { name: 'API Team', value: 150 },
-          { name: 'Database Team', value: 150 },
+          {
+            name: 'Backend',
+            value: 15,
+            children: [
+              { name: 'API Team', value: 8 },
+              { name: 'Database Team', value: 7 },
+            ],
+          },
+          {
+            name: 'Frontend',
+            value: 12,
+            children: [
+              { name: 'UI Team', value: 6 },
+              { name: 'UX Team', value: 6 },
+            ],
+          },
+          {
+            name: 'DevOps',
+            value: 13,
+            children: [
+              { name: 'Infrastructure', value: 7 },
+              { name: 'CI/CD', value: 6 },
+            ],
+          },
         ],
       },
       {
-        name: 'Frontend',
-        value: 250,
-        itemStyle: { color: '#26C6DA' },
+        name: 'Product',
+        value: 25,
         children: [
-          { name: 'UI Team', value: 125 },
-          { name: 'UX Team', value: 125 },
+          {
+            name: 'Product Management',
+            value: 15,
+            children: [
+              { name: 'Strategy', value: 8 },
+              { name: 'Analytics', value: 7 },
+            ],
+          },
+          {
+            name: 'Design',
+            value: 10,
+            children: [
+              { name: 'Product Design', value: 5 },
+              { name: 'Research', value: 5 },
+            ],
+          },
         ],
       },
       {
-        name: 'DevOps',
-        value: 200,
-        itemStyle: { color: '#78909C' },
+        name: 'Data Science',
+        value: 20,
         children: [
-          { name: 'Infrastructure', value: 100 },
-          { name: 'CI/CD', value: 100 },
-        ],
-      },
-      {
-        name: 'Training',
-        value: 150,
-        itemStyle: { color: '#66BB6A' },
-        children: [
-          { name: 'Technical Training', value: 75 },
-          { name: 'Soft Skills', value: 75 },
-        ],
-      },
-      {
-        name: 'Recruitment',
-        value: 100,
-        itemStyle: { color: '#66BB6A' },
-        children: [
-          { name: 'Technical Hiring', value: 50 },
-          { name: 'HR', value: 50 },
-        ],
-      },
-      {
-        name: 'Growth',
-        value: 180,
-        itemStyle: { color: '#FFA726' },
-        children: [
-          { name: 'Marketing', value: 90 },
-          { name: 'Sales', value: 90 },
+          {
+            name: 'Machine Learning',
+            value: 12,
+            children: [
+              { name: 'ML Engineers', value: 7 },
+              { name: 'Research Scientists', value: 5 },
+            ],
+          },
+          {
+            name: 'Analytics',
+            value: 8,
+            children: [
+              { name: 'Data Analysts', value: 4 },
+              { name: 'BI Engineers', value: 4 },
+            ],
+          },
         ],
       },
     ],
@@ -94,14 +108,30 @@ function Organization() {
 
   const option = {
     tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c}',
+      formatter: function (info) {
+        const value = info.value;
+        const treePathInfo = info.treePathInfo;
+        const treePath = [];
+        
+        for (let i = 1; i < treePathInfo.length; i++) {
+          treePath.push(treePathInfo[i].name);
+        }
+        
+        return [
+          '<div style="font-size:16px; padding:4px">',
+          treePath.join(' > '),
+          '</div>',
+          '<div style="padding:4px">',
+          'Team Size: ' + value,
+          '</div>'
+        ].join('');
+      },
     },
     series: [
       {
         type: 'treemap',
-        data: [departmentData],
-        leafDepth: 1,
+        data: [data],
+        leafDepth: 2,
         levels: [
           {
             itemStyle: {
@@ -118,6 +148,14 @@ function Organization() {
               borderWidth: 2,
             },
           },
+          {
+            colorSaturation: [0.3, 0.6],
+            itemStyle: {
+              borderColorSaturation: 0.7,
+              gapWidth: 1,
+              borderWidth: 1,
+            },
+          },
         ],
         label: {
           show: true,
@@ -127,35 +165,34 @@ function Organization() {
         upperLabel: {
           show: true,
           height: 30,
+          fontSize: 14,
+        },
+        breadcrumb: {
+          show: true,
+          height: 30,
+          bottom: 'bottom',
+          itemStyle: {
+            textStyle: {
+              fontSize: 14,
+            },
+          },
         },
       },
     ],
   };
 
-  const handleSearch = (event) => {
-    event.preventDefault();
-    // 实现搜索功能
-    console.log('Searching for:', searchTerm);
-  };
-
   return (
     <div className={classes.root}>
-      <Paper component="form" className={classes.searchBar} onSubmit={handleSearch}>
-        <InputBase
-          className={classes.input}
-          placeholder="Search departments..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+      <Typography variant="h5" component="h1" className={classes.title}>
+        Organization Structure
+      </Typography>
+      <Paper className={classes.chartContainer}>
+        <ReactECharts
+          option={option}
+          className={classes.chart}
+          opts={{ renderer: 'canvas' }}
         />
-        <IconButton type="submit" className={classes.iconButton} aria-label="search">
-          <SearchIcon />
-        </IconButton>
       </Paper>
-      <ReactECharts 
-        option={option} 
-        className={classes.chart}
-        style={{ height: '100%' }}
-      />
     </div>
   );
 }
