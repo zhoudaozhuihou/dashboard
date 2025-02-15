@@ -1,0 +1,4 @@
+source_system,source EIM ID,source file/total table count[daily/monthly table],downstream,downstream EIM ID,downstream share to GB/GF
+System A,EIM001,1500,System X,EIM101,800
+System B,EIM002,2000,System Y,EIM102,1200
+System C,EIM003,1800,System Z,EIM103,900

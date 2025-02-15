@@ -1,79 +1,98 @@
 import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { Grid, Paper, Typography, Box } from '@material-ui/core';
-import { useSelector } from 'react-redux';
-import { selectKpiData } from '../features/dashboard/dashboardSlice';
+import { Typography, Paper, Grid } from '@material-ui/core';
+import TrendingUpIcon from '@material-ui/icons/TrendingUp';
+import TrendingDownIcon from '@material-ui/icons/TrendingDown';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
     padding: theme.spacing(3),
-    backgroundColor: theme.palette.background.default,
-    minHeight: 'calc(100vh - 128px)',
+    backgroundColor: '#1e1e1e',
+    minHeight: 'calc(100vh - 64px)',
+  },
+  title: {
+    color: '#fff',
+    marginBottom: theme.spacing(2),
   },
   paper: {
     padding: theme.spacing(3),
     height: '100%',
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
-    transition: 'transform 0.2s ease-in-out',
-    '&:hover': {
-      transform: 'translateY(-4px)',
-    },
-  },
-  title: {
-    marginBottom: theme.spacing(3),
-    color: theme.palette.text.primary,
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#fff',
   },
   kpiValue: {
     fontSize: '2rem',
     fontWeight: 500,
-    color: theme.palette.primary.main,
+    color: '#2563eb',
     marginBottom: theme.spacing(1),
   },
   kpiLabel: {
-    color: theme.palette.text.secondary,
+    color: '#4b5563',
+    fontSize: '0.875rem',
   },
   kpiChange: {
     display: 'flex',
     alignItems: 'center',
-    marginTop: theme.spacing(1),
-    color: theme.palette.success.main,
+    marginTop: 'auto',
+    gap: theme.spacing(0.5),
+  },
+  positive: {
+    color: '#059669',
   },
   negative: {
-    color: theme.palette.error.main,
-  },
+    color: '#dc2626',
+  }
 }));
+
+const kpiData = [
+  {
+    label: 'Total Source Systems',
+    value: '15',
+    change: 12.5,
+  },
+  {
+    label: 'Active Connections',
+    value: '2,847',
+    change: -3.2,
+  },
+  {
+    label: 'Data Transfer Rate',
+    value: '1.2 TB/h',
+    change: 8.7,
+  },
+  {
+    label: 'System Uptime',
+    value: '99.9%',
+    change: 0.2,
+  }
+];
 
 function Overview() {
   const classes = useStyles();
-  const kpiData = useSelector(selectKpiData);
 
   return (
     <div className={classes.root}>
-      <Typography variant="h5" component="h1" className={classes.title}>
-        Performance Overview
+      <Typography variant="h5" className={classes.title}>
+        System Overview
       </Typography>
       <Grid container spacing={3}>
         {kpiData.map((kpi, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
-            <Paper className={classes.paper} elevation={0}>
-              <Box>
-                <Typography variant="h4" className={classes.kpiValue}>
-                  {typeof kpi.value === 'number' 
-                    ? kpi.value.toLocaleString()
-                    : kpi.value}
+            <Paper className={classes.paper}>
+              <Typography variant="h4" className={classes.kpiValue}>
+                {kpi.value}
+              </Typography>
+              <Typography className={classes.kpiLabel}>
+                {kpi.label}
+              </Typography>
+              <div className={`${classes.kpiChange} ${kpi.change >= 0 ? classes.positive : classes.negative}`}>
+                {kpi.change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                <Typography variant="body2">
+                  {Math.abs(kpi.change)}% vs last month
                 </Typography>
-                <Typography variant="body2" className={classes.kpiLabel}>
-                  {kpi.label}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  className={`${classes.kpiChange} ${kpi.change < 0 ? classes.negative : ''}`}
-                >
-                  {kpi.change > 0 ? '+' : ''}{kpi.change}% vs last month
-                </Typography>
-              </Box>
+              </div>
             </Paper>
           </Grid>
         ))}

@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
-import { Typography, Paper, IconButton } from '@material-ui/core';
+import { Typography, Paper, IconButton, Fade } from '@material-ui/core';
 import { ArrowBack } from '@material-ui/icons';
 import ReactECharts from 'echarts-for-react';
-import { selectDataFlowData, selectStatus } from '../features/dashboard/dashboardSlice';
+import { selectDataFlowData } from '../features/dashboard/dashboardSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -16,21 +16,31 @@ const useStyles = makeStyles((theme) => ({
   title: {
     color: '#fff',
     marginBottom: theme.spacing(1),
+    display: 'flex',
+    alignItems: 'center',
   },
   subtitle: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: '0.875rem',
+    marginBottom: theme.spacing(3),
   },
   flowContainer: {
     backgroundColor: '#fff',
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(2),
-    height: 600,
+    height: 'calc(100vh - 200px)',
+    minHeight: 600,
+    boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.3s ease-in-out',
+    '&:hover': {
+      boxShadow: '0 6px 30px 0 rgba(0, 0, 0, 0.15)',
+    },
   },
   backButton: {
-    marginBottom: theme.spacing(2),
+    marginRight: theme.spacing(2),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     color: '#fff',
+    padding: theme.spacing(1),
     '&:hover': {
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
@@ -42,18 +52,6 @@ function DataFlow() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [viewType, setViewType] = useState('main');
   const dataFlowData = useSelector(selectDataFlowData);
-  const status = useSelector(selectStatus);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('DataFlow component data:', {
-      dataFlowData,
-      selectedNode,
-      viewType,
-      status,
-      detailData: dataFlowData?.detailData,
-    });
-  }, [dataFlowData, selectedNode, viewType, status]);
 
   const mainGraph = useMemo(() => {
     return dataFlowData?.mainGraph || { nodes: [], links: [] };
@@ -63,329 +61,264 @@ function DataFlow() {
     return dataFlowData?.detailData || {};
   }, [dataFlowData]);
 
-  const getMainChartOption = () => ({
-    tooltip: {
-      trigger: 'item',
-      triggerOn: 'mousemove',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#ccc',
-      borderWidth: 1,
-      padding: [10, 15],
-      textStyle: {
-        color: '#333',
-      },
-      formatter: function (params) {
-        const value = params.value || 0;
-        return [
-          params.name,
-          'Flow: ' + value.toLocaleString() + ' records/hour',
-        ].join('<br/>');
-      },
-    },
-    grid: {
-      left: '5%',
-      right: '5%',
-      top: '5%',
-      bottom: '5%',
-      containLabel: true,
-    },
-    series: [
-      {
-        type: 'graph',
-        layout: 'none',
-        data: mainGraph.nodes.map((node) => {
-          let x, category;
-          if (node.type === 'cdp') {
-            x = 0.5;
-            category = 1;
-          } else if (node.type === 'downstream') {
-            x = 0.8;
-            category = 2;
-          } else {
-            x = 0.2;
-            category = 0;
-          }
-
-          let y;
-          if (category === 1) {
-            y = 0.5;
-          } else if (category === 0) {
-            const sourceNodes = mainGraph.nodes.filter((n) => n.type === 'source');
-            const index = sourceNodes.findIndex((n) => n.name === node.name);
-            y = (index + 1) / (sourceNodes.length + 1);
-          } else {
-            const targetNodes = mainGraph.nodes.filter((n) => n.type === 'downstream');
-            const index = targetNodes.findIndex((n) => n.name === node.name);
-            y = (index + 1) / (targetNodes.length + 1);
-          }
-
-          // 计算节点大小
-          let baseSize;
-          if (category === 1) {
-            baseSize = 80; // CDP 节点最大
-          } else if (category === 2) {
-            baseSize = 60; // 下游节点次之
-          } else {
-            baseSize = 50; // 源系统节点最小
-          }
-
-          // 根据数值调整大小
-          const sizeScale = Math.sqrt(node.value) * 0.05;
-          const finalSize = Math.max(baseSize, baseSize * sizeScale);
-
-          return {
-            ...node,
-            x: x * 100,
-            y: y * 100,
-            symbolSize: finalSize,
-            symbol: 'circle',
-            category: category,
-            itemStyle: {
-              color:
-                category === 1
-                  ? '#06b6d4'
-                  : category === 2
-                  ? '#10b981'
-                  : '#8B5CF6',
-              borderColor: '#fff',
-              borderWidth: 2,
-              shadowColor: 'rgba(0, 0, 0, 0.2)',
-              shadowBlur: 10,
-            },
-            label: {
-              show: true,
-              position: 'inside',
-              formatter: function (params) {
-                let result = '{title|' + params.data.name + '}';
-                if (params.data.subLabel) {
-                  result += '\n{subtitle|' + params.data.subLabel + '}';
-                }
-                return result;
-              },
-              rich: {
-                title: {
-                  fontSize: 14,
-                  fontWeight: 'normal',
-                  color: '#fff',
-                  padding: [0, 0, 2, 0],
-                },
-                subtitle: {
-                  fontSize: 12,
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  padding: [2, 0, 0, 0],
-                },
-              },
-            },
-          };
-        }),
-        links: mainGraph.links.map((link) => ({
-          ...link,
-          lineStyle: {
-            width: Math.sqrt(link.value) * 0.5, // 增加线条粗细
-            color: {
-              type: 'linear',
-              x: 0,
-              y: 0,
-              x2: 1,
-              y2: 0,
-              colorStops: [
-                {
-                  offset: 0,
-                  color: 'rgba(139, 92, 246, 0.5)',
-                },
-                {
-                  offset: 0.5,
-                  color: 'rgba(6, 182, 212, 0.5)',
-                },
-                {
-                  offset: 1,
-                  color: 'rgba(16, 185, 129, 0.5)',
-                },
-              ],
-            },
-            opacity: 0.8,
-            curveness: 0.2,
-            type: 'solid',
-          },
-        })),
-        categories: [
-          { name: 'Source Systems' },
-          { name: 'CDP' },
-          { name: 'Downstream' },
-        ],
-        roam: false, // 禁用缩放和平移
-        focusNodeAdjacency: true,
-        emphasis: {
-          focus: 'adjacency',
-          lineStyle: {
-            width: 'inherit',
-            opacity: 1,
-          },
-        },
-      },
-    ],
-  });
-
-  const getDetailChartOption = (nodeName) => {
-    console.log('Generating detail chart option for node:', nodeName);
-    console.log('Available detail data:', detailData);
-
-    if (!nodeName) {
-      console.log('No node name provided');
-      return null;
-    }
-
-    if (!detailData[nodeName]) {
-      console.log('No detail data found for node:', nodeName);
-      return null;
-    }
-
-    const nodeData = detailData[nodeName];
-    console.log('Node data:', nodeData);
-
-    if (!nodeData?.nodes?.length) {
-      console.log('No nodes in detail data');
-      return null;
-    }
-
-    if (!nodeData?.links?.length) {
-      console.log('No links in detail data');
-      return null;
-    }
-
-    const option = {
+  const getMainChartOption = useCallback(() => {
+    return {
+      backgroundColor: '#ffffff',
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
-        formatter: function (params) {
-          if (params.dataType === 'node') {
-            return params.data.name + ': ' + params.data.value.toLocaleString();
-          } else {
-            return (
-              params.data.source +
-              ' → ' +
-              params.data.target +
-              ': ' +
-              params.data.value.toLocaleString()
-            );
-          }
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#eee',
+        borderWidth: 1,
+        padding: [10, 15],
+        textStyle: {
+          color: '#333',
+          fontSize: 13,
         },
+        formatter: function (params) {
+          if (params.dataType === 'edge') {
+            return `<div style="font-weight: bold; margin-bottom: 4px;">Data Flow</div>
+                    Tables: ${params.value.toLocaleString()}`;
+          }
+          const node = params.data;
+          return `<div style="font-weight: bold; margin-bottom: 4px;">${node.name}</div>
+                  ${node.subLabel ? `EIM ID: ${node.subLabel}<br/>` : ''}
+                  Tables: ${node.value.toLocaleString()}`;
+        },
+      },
+      grid: {
+        left: '5%',
+        right: '5%',
+        top: '5%',
+        bottom: '5%',
+        containLabel: true,
+      },
+      series: [
+        {
+          type: 'graph',
+          layout: 'none',
+          symbolSize: 50,
+          roam: true,
+          animation: true,
+          data: mainGraph.nodes.map((node) => {
+            let x, y;
+            
+            if (node.type === 'source') {
+              x = 100;
+              const sourceNodes = mainGraph.nodes.filter(n => n.type === 'source');
+              const index = sourceNodes.findIndex(n => n.name === node.name);
+              y = (index + 1) * (600 / (sourceNodes.length + 1));
+            } else if (node.type === 'cdp') {
+              x = 400;
+              y = 300;
+            } else {
+              x = 700;
+              const targetNodes = mainGraph.nodes.filter(n => n.type === 'downstream');
+              const index = targetNodes.findIndex(n => n.name === node.name);
+              y = (index + 1) * (600 / (targetNodes.length + 1));
+            }
+
+            const minSize = 40;
+            const maxSize = 90;
+            const size = node.type === 'cdp' ? maxSize : 
+              Math.min(maxSize, minSize + Math.sqrt(node.value) * 0.5);
+
+            return {
+              ...node,
+              x,
+              y,
+              symbolSize: size,
+              symbol: 'circle',
+              label: {
+                show: true,
+                position: node.type === 'source' ? 'left' : node.type === 'downstream' ? 'right' : 'inside',
+                color: node.type === 'cdp' ? '#fff' : '#333',
+                fontSize: node.type === 'cdp' ? 14 : 12,
+                fontWeight: 'bold',
+                formatter: [
+                  '{name|{b}}',
+                  '{value|{c} tables}'
+                ].join('\n'),
+                rich: {
+                  name: {
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    padding: [0, 0, 4, 0],
+                    color: node.type === 'cdp' ? '#fff' : '#333'
+                  },
+                  value: {
+                    fontSize: 12,
+                    color: node.type === 'cdp' ? '#fff' : '#666',
+                    fontWeight: 'normal'
+                  }
+                }
+              },
+              itemStyle: {
+                color: node.type === 'cdp' ? '#1890ff' : 
+                       node.type === 'source' ? '#722ed1' : '#13c2c2',
+                borderColor: '#fff',
+                borderWidth: 2,
+                shadowBlur: 20,
+                shadowColor: 'rgba(0, 0, 0, 0.2)',
+                opacity: 0.9
+              },
+              emphasis: {
+                scale: true,
+                itemStyle: {
+                  opacity: 1,
+                  shadowBlur: 30
+                }
+              }
+            };
+          }),
+          links: mainGraph.links.map(link => ({
+            ...link,
+            lineStyle: {
+              color: 'rgba(0, 0, 0, 0.2)',  
+              width: Math.max(2, Math.log(link.value) * 2),
+              curveness: 0.2,
+              opacity: 0.6,
+              type: 'solid',
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.2)'
+            },
+            emphasis: {
+              lineStyle: {
+                opacity: 0.8,
+                shadowBlur: 20,
+                width: 'bolder'
+              }
+            }
+          })),
+          emphasis: {
+            focus: 'adjacency',
+            scale: true
+          }
+        }
+      ]
+    };
+  }, [mainGraph]);
+
+  const getDetailChartOption = useCallback((nodeName) => {
+    if (!nodeName || !detailData[nodeName]) return null;
+
+    const { nodes, links } = detailData[nodeName];
+    
+    return {
+      backgroundColor: '#ffffff',
+      tooltip: {
+        trigger: 'item',
+        triggerOn: 'mousemove',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#eee',
+        borderWidth: 1,
+        padding: [10, 15],
+        textStyle: {
+          color: '#333',
+          fontSize: 13
+        },
+        formatter: function(params) {
+          return `<div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
+                  Tables: ${params.value.toLocaleString()}`;
+        }
       },
       series: [
         {
           type: 'sankey',
-          left: 50,
-          right: 150,
-          top: 20,
-          bottom: 20,
           emphasis: {
-            focus: 'adjacency',
+            focus: 'adjacency'
           },
-          nodeAlign: 'justify',
+          nodeAlign: 'left',
           layoutIterations: 32,
-          nodeWidth: 20,
-          nodeGap: 8,
-          data: nodeData.nodes.map((node) => ({
-            ...node,
+          nodeGap: 30,
+          data: nodes.map(node => ({
+            name: node.name,
+            value: node.value,
             itemStyle: {
-              color: '#06b6d4',
+              color: node.name === 'CDP' ? '#1890ff' : 
+                     links.some(link => link.target === node.name) ? '#13c2c2' : '#722ed1',
               borderColor: '#fff',
               borderWidth: 1,
+              shadowBlur: 10,
               shadowColor: 'rgba(0, 0, 0, 0.2)',
-              shadowBlur: 5,
+              opacity: 0.9
             },
+            emphasis: {
+              itemStyle: {
+                opacity: 1,
+                shadowBlur: 20
+              }
+            }
           })),
-          links: nodeData.links.map((link) => ({
+          links: links.map(link => ({
             ...link,
             lineStyle: {
-              color: 'gradient',
-              opacity: 0.6,
-              curveness: 0.5,
+              color: 'source',
+              opacity: 0.5
             },
+            emphasis: {
+              lineStyle: {
+                opacity: 0.8
+              }
+            }
           })),
           label: {
-            position: 'right',
-            show: true,
-            color: '#333',
+            position: 'inside',
+            formatter: '{b}\n{c} tables',
             fontSize: 12,
-            formatter: '{b}',
-          },
-          lineStyle: {
-            color: 'source',
-            opacity: 0.6,
-            curveness: 0.5,
-          },
-        },
-      ],
+            fontWeight: 'bold',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            padding: [4, 8],
+            borderRadius: 4
+          }
+        }
+      ]
     };
+  }, [detailData]);
 
-    console.log('Generated detail chart option:', option);
-    return option;
-  };
-
-  const handleChartClick = (params) => {
-    console.log('Chart click event:', params);
-    if (params.data && params.data.type === 'downstream') {
-      const nodeName = params.data.name;
-      console.log('Clicked downstream node:', nodeName);
-      console.log('Available detail data for node:', detailData[nodeName]);
-      setSelectedNode(nodeName);
+  const handleChartClick = useCallback((params) => {
+    if (params.dataType === 'node' && params.data.type === 'downstream') {
+      setSelectedNode(params.data.name);
       setViewType('detail');
     }
-  };
+  }, []);
 
-  const handleBack = () => {
-    console.log('Switching back to main view');
+  const handleBackClick = useCallback(() => {
     setSelectedNode(null);
     setViewType('main');
-  };
-
-  const currentOption = useMemo(() => {
-    console.log('Calculating current option:', {
-      viewType,
-      selectedNode,
-      hasDetailData: selectedNode ? !!detailData[selectedNode] : false,
-    });
-
-    if (viewType === 'main') {
-      return getMainChartOption();
-    }
-
-    return getDetailChartOption(selectedNode);
-  }, [viewType, mainGraph, selectedNode, detailData]);
+  }, []);
 
   return (
     <div className={classes.root}>
-      {viewType === 'detail' && (
-        <IconButton className={classes.backButton} onClick={handleBack}>
-          <ArrowBack />
-        </IconButton>
-      )}
-      <Typography variant="h5" className={classes.title}>
-        {viewType === 'main' ? 'Data Flow Overview' : selectedNode}
-      </Typography>
+      <div className={classes.title}>
+        {viewType === 'detail' && (
+          <IconButton className={classes.backButton} onClick={handleBackClick} size="small">
+            <ArrowBack />
+          </IconButton>
+        )}
+        <Typography variant="h5" component="span">
+          {viewType === 'main' ? 'System Data Flow' : `${selectedNode} Detail View`}
+        </Typography>
+      </div>
       <Typography className={classes.subtitle}>
-        {viewType === 'main'
-          ? 'Data flow between systems'
-          : 'Detailed data flow within system'}
+        {viewType === 'main' 
+          ? 'Click on a downstream system to view detailed data flow'
+          : 'Showing detailed data flow for the selected system'
+        }
       </Typography>
-      <Paper className={classes.flowContainer}>
-        {!currentOption ? (
-          <Typography color="textSecondary">
-            {status === 'loading' ? 'Loading...' : 'No data available'}
-          </Typography>
-        ) : (
+      <Fade in={true} timeout={500}>
+        <Paper className={classes.flowContainer}>
           <ReactECharts
-            option={currentOption}
-            style={{ height: '100%', width: '100%' }}
+            option={viewType === 'main' ? getMainChartOption() : getDetailChartOption(selectedNode)}
+            style={{ height: '100%' }}
             onEvents={{
-              click: handleChartClick,
+              click: viewType === 'main' ? handleChartClick : undefined
             }}
             notMerge={true}
-            lazyUpdate={true}
+            lazyUpdate={false}
           />
-        )}
-      </Paper>
+        </Paper>
+      </Fade>
     </div>
   );
 }

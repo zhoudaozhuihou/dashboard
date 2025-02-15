@@ -2,8 +2,6 @@ import { createSlice } from '@reduxjs/toolkit';
 import { loadDashboardData } from '../../services/dataService';
 
 const initialState = {
-  kpiData: [],
-  organizationData: { departments: [] },
   dataFlowData: {
     mainGraph: { nodes: [], links: [] },
     detailData: {}
@@ -17,10 +15,7 @@ const dashboardSlice = createSlice({
   initialState,
   reducers: {
     setDashboardData: (state, action) => {
-      const { kpiData, organizationData, dataFlowData } = action.payload;
-      state.kpiData = kpiData;
-      state.organizationData = organizationData;
-      state.dataFlowData = dataFlowData;
+      state.dataFlowData = action.payload.dataFlowData;
     },
     setStatus: (state, action) => {
       state.status = action.payload;
@@ -38,17 +33,17 @@ export const loadDashboardDataAsync = () => async (dispatch) => {
   try {
     dispatch(setStatus('loading'));
     const data = await loadDashboardData();
+    console.log('Loaded dashboard data:', data);
     dispatch(setDashboardData(data));
     dispatch(setStatus('succeeded'));
   } catch (error) {
+    console.error('Error loading dashboard data:', error);
     dispatch(setStatus('failed'));
     dispatch(setError(error.toString()));
   }
 };
 
 // Selectors
-export const selectKpiData = (state) => state.dashboard.kpiData;
-export const selectOrganizationData = (state) => state.dashboard.organizationData;
 export const selectDataFlowData = (state) => state.dashboard.dataFlowData;
 export const selectStatus = (state) => state.dashboard.status;
 export const selectError = (state) => state.dashboard.error;
