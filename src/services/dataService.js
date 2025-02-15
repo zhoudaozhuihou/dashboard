@@ -1,42 +1,34 @@
 import * as XLSX from 'xlsx';
 
-// 模拟数据，用于开发测试
-const mockDataFlowData = [
-  {
-    'source_system': 'System A',
-    'source EIM ID': 'EIM001',
-    'source file/total table count[daily/monthly table]': '1500',
-    'downstream': 'System X',
-    'downstream EIM ID': 'EIM101',
-    'downstream share to GB/GF': '800'
-  },
-  {
-    'source_system': 'System B',
-    'source EIM ID': 'EIM002',
-    'source file/total table count[daily/monthly table]': '2000',
-    'downstream': 'System Y',
-    'downstream EIM ID': 'EIM102',
-    'downstream share to GB/GF': '1200'
-  },
-  {
-    'source_system': 'System C',
-    'source EIM ID': 'EIM003',
-    'source file/total table count[daily/monthly table]': '1800',
-    'downstream': 'System Z',
-    'downstream EIM ID': 'EIM103',
-    'downstream share to GB/GF': '900'
-  }
-];
-
 // 用于解析 CSV 数据
 const parseCSV = (csvText) => {
   const lines = csvText.split('\n');
   const headers = lines[0].split(',').map(header => header.trim());
   
   return lines.slice(1).map(line => {
-    const values = line.split(',').map(value => value.trim());
+    // 处理可能包含逗号的字段（在引号内的逗号不应该分割）
+    const values = [];
+    let currentValue = '';
+    let insideQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === ',' && !insideQuotes) {
+        values.push(currentValue.trim());
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    values.push(currentValue.trim());
+    
+    // 移除值中的引号
+    const cleanValues = values.map(value => value.replace(/^"(.*)"$/, '$1').trim());
+    
     return headers.reduce((obj, header, index) => {
-      obj[header] = values[index];
+      obj[header] = cleanValues[index];
       return obj;
     }, {});
   }).filter(row => Object.values(row).some(value => value)); // 过滤掉空行
@@ -50,92 +42,144 @@ const transformMainGraph = (dataFlowData) => {
   const downstreamSystemSet = new Set();
   
   dataFlowData.forEach(row => {
-    if (row['source_system']) {
-      sourceSystemSet.add(row['source_system']);
+    console.log('Processing row:', row);
+    if (row['Source system'] && row['Source system'].trim()) {
+      sourceSystemSet.add(row['Source system'].trim());
     }
-    if (row['downstream']) {
-      downstreamSystemSet.add(row['downstream']);
+    if (row['Downstream Application Name'] && row['Downstream Application Name'].trim()) {
+      downstreamSystemSet.add(row['Downstream Application Name'].trim());
     }
   });
 
+  console.log('Source systems:', Array.from(sourceSystemSet));
+  console.log('Downstream systems:', Array.from(downstreamSystemSet));
+  
   // 创建节点数据
   const nodes = [];
   const links = [];
   
   // CDP 节点（中心节点）
+  const totalCDPValue = dataFlowData.reduce((sum, row) => 
+    sum + (Number(row['Total CDP Table Count(Include Daliy/Monthly Table)']) || 0), 0);
+
   nodes.push({
     name: 'CDP',
     type: 'cdp',
-    value: 2000,
+    value: totalCDPValue,
     category: 1
   });
 
   // 源系统节点
   Array.from(sourceSystemSet).forEach(systemName => {
-    const systemData = dataFlowData.find(row => row['source_system'] === systemName);
-    if (systemData) {
+    const systemRows = dataFlowData.filter(row => row['Source system'] === systemName);
+    if (systemRows.length > 0) {
+      const systemData = systemRows[0];
+      const sourceValue = Number(systemData['Source File/Table Count']) || 0;
+      
+      console.log('Creating source node:', {
+        name: systemName,
+        value: sourceValue,
+        applicationName: systemData['Source Application Name'],
+        eimId: systemData['Source EIM ID']
+      });
+
       nodes.push({
         name: systemName,
         type: 'source',
-        value: Number(systemData['source file/total table count[daily/monthly table]']) || 1000,
+        value: sourceValue,
         category: 0,
-        subLabel: systemData['source EIM ID']
+        applicationName: systemData['Source Application Name'],
+        eimId: systemData['Source EIM ID'],
+        sysCode: systemData['SYS_CODE'],
+        subSysCode: systemData['SUB_SYS_CODE']
       });
     }
   });
 
   // 下游系统节点
   Array.from(downstreamSystemSet).forEach(systemName => {
-    const systemData = dataFlowData.find(row => row['downstream'] === systemName);
-    if (systemData) {
+    const systemRows = dataFlowData.filter(row => row['Downstream Application Name'] === systemName);
+    if (systemRows.length > 0) {
+      const systemData = systemRows[0];
+      const totalShareCount = systemRows
+        .reduce((sum, row) => sum + (Number(row['Share to Downstream Table Count']) || 0), 0);
+
       nodes.push({
         name: systemName,
         type: 'downstream',
-        value: Number(systemData['downstream share to GB/GF']) || 1000,
+        value: totalShareCount,
         category: 2,
-        subLabel: systemData['downstream EIM ID']
+        eimId: systemData['Downstream EIM ID'],
+        gbgf: systemData['GB/GF']
       });
     }
   });
 
   // 创建连接
   dataFlowData.forEach(row => {
+    const sourceValue = Number(row['Total CDP Table Count(Include Daliy/Monthly Table)']) || 0;
+    const targetValue = Number(row['Share to Downstream Table Count']) || 0;
+
     // 源系统到 CDP 的连接
-    if (row['source_system']) {
-      links.push({
-        source: row['source_system'],
+    if (row['Source system'] && row['Source system'].trim()) {
+      console.log('Creating source link:', {
+        source: row['Source system'].trim(),
         target: 'CDP',
-        value: Number(row['source file/total table count[daily/monthly table]']) || 100
+        value: sourceValue
+      });
+
+      links.push({
+        source: row['Source system'].trim(),
+        target: 'CDP',
+        value: sourceValue
       });
     }
 
     // CDP 到下游系统的连接
-    if (row['downstream']) {
+    if (row['Downstream Application Name'] && row['Downstream Application Name'].trim()) {
       links.push({
         source: 'CDP',
-        target: row['downstream'],
-        value: Number(row['downstream share to GB/GF']) || 100
+        target: row['Downstream Application Name'].trim(),
+        value: targetValue
       });
     }
   });
 
-  console.log('Transformed main graph:', { nodes, links });
+  // 调整节点大小计算
+  const maxSourceCount = Math.max(...nodes.filter(n => n.type === 'source').map(n => n.value), 1);
+  const maxDownstreamCount = Math.max(...nodes.filter(n => n.type === 'downstream').map(n => n.value), 1);
+  const maxCount = Math.max(maxSourceCount, maxDownstreamCount);
+  const minSize = 40;
+  const maxSize = 100;
+
+  nodes.forEach(node => {
+    if (node.type === 'source' || node.type === 'downstream') {
+      // 使用平方根比例来计算节点大小，确保面积与数值成正比
+      const ratio = Math.sqrt(node.value / maxCount);
+      node.symbolSize = minSize + (maxSize - minSize) * ratio;
+    } else {
+      // CDP 节点大小基于其总值
+      const ratio = Math.sqrt(node.value / maxCount);
+      node.symbolSize = minSize + (maxSize - minSize) * ratio * 1.2; // CDP 节点稍大一些
+    }
+  });
+
+  console.log('Final nodes:', nodes);
+  console.log('Final links:', links);
+  
   return { nodes, links };
 };
 
 const transformDetailData = (dataFlowData) => {
-  // 按下游系统名称分组
   const detailData = {};
   
-  // 为每个下游系统创建桑基图数据
-  const downstreamSystems = new Set(dataFlowData.map(row => row['downstream']));
+  const downstreamSystems = new Set(dataFlowData.map(row => row['Downstream Application Name']));
   
   downstreamSystems.forEach(downstreamSystem => {
     if (!downstreamSystem) return;
     
-    // 获取与此下游系统相关的所有行
     const relatedRows = dataFlowData.filter(row => 
-      row['downstream'] === downstreamSystem
+      row['Downstream Application Name'] === downstreamSystem
     );
     
     if (relatedRows.length === 0) return;
@@ -143,27 +187,32 @@ const transformDetailData = (dataFlowData) => {
     const nodes = [];
     const links = [];
     
-    // 获取下游系统的值
-    const downstreamValue = Number(relatedRows[0]['downstream share to GB/GF']) || 1000;
-    
-    // 添加源系统节点和连接
-    const sourceNodes = new Set(relatedRows.map(row => row['source_system']));
+    // 计算此下游系统的总 Share to Downstream Table Count
+    const totalShareCount = relatedRows.reduce((sum, row) => 
+      sum + (Number(row['Share to Downstream Table Count']) || 0), 0);
+
+    // 添加源系统节点
+    const sourceNodes = new Set(relatedRows.map(row => row['Source system']));
     sourceNodes.forEach(sourceName => {
       if (sourceName) {
-        const sourceData = relatedRows.find(row => row['source_system'] === sourceName);
-        const sourceValue = Number(sourceData['source file/total table count[daily/monthly table]']) || 1000;
-        
-        // 添加源系统节点
+        const sourceData = relatedRows.find(row => row['Source system'] === sourceName);
+        const sourceValue = Number(sourceData['Source File/Table Count']) || 1000;
         nodes.push({
-          name: sourceName,
-          value: sourceValue
+          name: sourceName,  // 显示 Source system
+          value: sourceValue,
+          sourceSystem: true,  // 标记为源系统节点
+          applicationName: sourceData['Source Application Name'],  // 用于悬停显示
+          eimId: sourceData['Source EIM ID'],  // 用于悬停显示
+          itemStyle: {
+            color: '#722ed1'
+          }
         });
-        
+
         // 添加源系统到 CDP 的连接
         links.push({
           source: sourceName,
           target: 'CDP',
-          value: downstreamValue // 使用下游系统的值
+          value: Number(sourceData['Total CDP Table Count(Include Daliy/Monthly Table)']) || 100
         });
       }
     });
@@ -171,20 +220,27 @@ const transformDetailData = (dataFlowData) => {
     // 添加 CDP 节点
     nodes.push({
       name: 'CDP',
-      value: downstreamValue // 使用下游系统的值
+      value: totalShareCount,
+      itemStyle: {
+        color: '#1890ff'
+      }
     });
     
     // 添加下游系统节点
     nodes.push({
-      name: downstreamSystem,
-      value: downstreamValue
+      name: downstreamSystem,  // Downstream Application Name
+      value: totalShareCount,
+      eimId: relatedRows[0]['Downstream EIM ID'],  // 直接显示
+      itemStyle: {
+        color: '#13c2c2'
+      }
     });
     
     // 添加 CDP 到下游系统的连接
     links.push({
       source: 'CDP',
       target: downstreamSystem,
-      value: downstreamValue
+      value: totalShareCount
     });
     
     detailData[downstreamSystem] = { nodes, links };
@@ -198,22 +254,8 @@ export const loadDashboardData = async () => {
   try {
     console.log('Loading dashboard data...');
     
-    // 在开发环境中使用模拟数据
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Using mock data in development mode');
-      const mainGraph = transformMainGraph(mockDataFlowData);
-      const detailData = transformDetailData(mockDataFlowData);
-      
-      return {
-        dataFlowData: {
-          mainGraph,
-          detailData
-        }
-      };
-    }
-    
     // 读取 CSV 文件
-    const response = await fetch('/data/dashboard-data.csv');
+    const response = await fetch('/data/CDP-Dashboard-Data.csv');
     if (!response.ok) {
       throw new Error(`Failed to fetch CSV file: ${response.status} ${response.statusText}`);
     }
@@ -240,24 +282,6 @@ export const loadDashboardData = async () => {
     };
   } catch (error) {
     console.error('Error loading dashboard data:', error);
-    // 使用模拟数据
-    console.log('Using mock data due to error:', error.message);
-    
-    // 使用 CSV 文本作为模拟数据
-    const mockCSV = `source_system,source EIM ID,source file/total table count[daily/monthly table],downstream,downstream EIM ID,downstream share to GB/GF
-System A,EIM001,1500,System X,EIM101,800
-System B,EIM002,2000,System Y,EIM102,1200
-System C,EIM003,1800,System Z,EIM103,900`;
-    
-    const mockData = parseCSV(mockCSV);
-    const mainGraph = transformMainGraph(mockData);
-    const detailData = transformDetailData(mockData);
-    
-    return {
-      dataFlowData: {
-        mainGraph,
-        detailData
-      }
-    };
+    throw error;
   }
 };

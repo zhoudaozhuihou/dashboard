@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
-import { Typography, Paper, IconButton, Fade } from '@material-ui/core';
+import { Typography, Paper, IconButton, Fade, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
 import { ArrowBack } from '@material-ui/icons';
 import ReactECharts from 'echarts-for-react';
 import { selectDataFlowData } from '../features/dashboard/dashboardSlice';
@@ -13,6 +13,15 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: '#1e1e1e',
     minHeight: 'calc(100vh - 64px)',
   },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  titleSection: {
+    flex: 1,
+  },
   title: {
     color: '#fff',
     marginBottom: theme.spacing(1),
@@ -22,7 +31,28 @@ const useStyles = makeStyles((theme) => ({
   subtitle: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: '0.875rem',
-    marginBottom: theme.spacing(3),
+  },
+  filterSection: {
+    marginLeft: theme.spacing(2),
+  },
+  formControl: {
+    minWidth: 120,
+    marginLeft: theme.spacing(2),
+    '& .MuiInputLabel-root': {
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+    '& .MuiInput-root': {
+      color: '#fff',
+    },
+    '& .MuiInput-underline:before': {
+      borderBottomColor: 'rgba(255, 255, 255, 0.42)',
+    },
+    '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+      borderBottomColor: 'rgba(255, 255, 255, 0.87)',
+    },
+  },
+  selectEmpty: {
+    marginTop: theme.spacing(2),
   },
   flowContainer: {
     backgroundColor: '#fff',
@@ -51,11 +81,101 @@ function DataFlow() {
   const classes = useStyles();
   const [selectedNode, setSelectedNode] = useState(null);
   const [viewType, setViewType] = useState('main');
+  const [selectedGBGF, setSelectedGBGF] = useState('all');
   const dataFlowData = useSelector(selectDataFlowData);
 
-  const mainGraph = useMemo(() => {
-    return dataFlowData?.mainGraph || { nodes: [], links: [] };
+  // 获取所有唯一的 GB/GF 值
+  const gbgfOptions = useMemo(() => {
+    if (!dataFlowData?.mainGraph) return ['all'];
+    
+    const gbgfSet = new Set();
+    dataFlowData.mainGraph.nodes
+      .filter(node => node.type === 'downstream' && node.gbgf)
+      .forEach(node => {
+        const values = node.gbgf.split(',').map(v => v.trim());
+        values.forEach(v => gbgfSet.add(v));
+      });
+    
+    return ['all', ...Array.from(gbgfSet)].sort();
   }, [dataFlowData]);
+
+  // 根据选择的 GB/GF 筛选数据
+  const filteredMainGraph = useMemo(() => {
+    if (!dataFlowData?.mainGraph || selectedGBGF === 'all') {
+      return dataFlowData?.mainGraph;
+    }
+
+    const { nodes: originalNodes, links: originalLinks } = dataFlowData.mainGraph;
+    
+    // 筛选下游节点
+    const filteredDownstreamNodes = originalNodes.filter(node => 
+      node.type === 'downstream' && 
+      node.gbgf && 
+      node.gbgf.split(',').map(v => v.trim()).includes(selectedGBGF)
+    );
+
+    // 获取下游节点的名称集合
+    const downstreamNames = new Set(filteredDownstreamNodes.map(node => node.name));
+
+    // 筛选相关的 CDP 到下游系统的连接
+    const filteredCdpLinks = originalLinks.filter(link =>
+      link.source === 'CDP' && downstreamNames.has(link.target)
+    );
+
+    // 找出与选定 GB/GF 相关的源系统
+    const sourceSystemsForGBGF = new Set();
+    originalLinks.forEach(link => {
+      // 如果这个连接指向了筛选后的下游系统
+      if (link.source === 'CDP' && downstreamNames.has(link.target)) {
+        // 找出连接到这个下游系统的所有源系统
+        originalLinks.forEach(sourceLink => {
+          if (sourceLink.target === 'CDP') {
+            // 检查这个源系统是否确实通过 CDP 连接到了筛选后的下游系统
+            const hasPathToDownstream = originalLinks.some(l => 
+              l.source === 'CDP' && 
+              downstreamNames.has(l.target) && 
+              l.target !== link.target
+            );
+            if (hasPathToDownstream) {
+              sourceSystemsForGBGF.add(sourceLink.source);
+            }
+          }
+        });
+      }
+    });
+
+    // 筛选相关的源系统节点
+    const filteredSourceNodes = originalNodes.filter(node =>
+      node.type === 'source' && sourceSystemsForGBGF.has(node.name)
+    );
+
+    // 获取源系统到 CDP 的连接
+    const filteredSourceLinks = originalLinks.filter(link =>
+      link.target === 'CDP' && sourceSystemsForGBGF.has(link.source)
+    );
+
+    // 组合所有节点和连接
+    const nodes = [
+      ...filteredSourceNodes,
+      originalNodes.find(node => node.type === 'cdp'),
+      ...filteredDownstreamNodes
+    ].filter(Boolean);
+
+    const links = [
+      ...filteredSourceLinks,
+      ...filteredCdpLinks
+    ];
+
+    return { nodes, links };
+  }, [dataFlowData, selectedGBGF]);
+
+  const handleGBGFChange = (event) => {
+    setSelectedGBGF(event.target.value);
+  };
+
+  const mainGraph = useMemo(() => {
+    return filteredMainGraph || { nodes: [], links: [] };
+  }, [filteredMainGraph]);
 
   const detailData = useMemo(() => {
     return dataFlowData?.detailData || {};
@@ -81,8 +201,16 @@ function DataFlow() {
                     Tables: ${params.value.toLocaleString()}`;
           }
           const node = params.data;
+          if (node.type === 'source') {
+            return `<div style="font-weight: bold; margin-bottom: 4px;">${node.applicationName}</div>
+                    EIM ID: ${node.eimId}<br/>
+                    Tables: ${node.value.toLocaleString()}`;
+          } else if (node.type === 'downstream') {
+            return `<div style="font-weight: bold; margin-bottom: 4px;">${node.name}</div>
+                    EIM ID: ${node.eimId}<br/>
+                    Tables: ${node.value.toLocaleString()}`;
+          }
           return `<div style="font-weight: bold; margin-bottom: 4px;">${node.name}</div>
-                  ${node.subLabel ? `EIM ID: ${node.subLabel}<br/>` : ''}
                   Tables: ${node.value.toLocaleString()}`;
         },
       },
@@ -127,7 +255,6 @@ function DataFlow() {
               ...node,
               x,
               y,
-              symbolSize: size,
               symbol: 'circle',
               label: {
                 show: true,
@@ -135,16 +262,36 @@ function DataFlow() {
                 color: node.type === 'cdp' ? '#fff' : '#333',
                 fontSize: node.type === 'cdp' ? 14 : 12,
                 fontWeight: 'bold',
-                formatter: [
-                  '{name|{b}}',
-                  '{value|{c} tables}'
-                ].join('\n'),
+                formatter: function(params) {
+                  if (params.data.type === 'source') {
+                    return [
+                      '{name|' + params.data.name + '}',
+                      '{value|' + params.data.value.toLocaleString() + ' tables}'
+                    ].join('\n');
+                  } else if (params.data.type === 'downstream') {
+                    return [
+                      '{name|' + params.data.name + '}',
+                      '{eimId|' + params.data.eimId + '}',
+                      '{value|' + params.data.value.toLocaleString() + ' tables}'
+                    ].join('\n');
+                  } else {
+                    return [
+                      '{name|China Data Platform}',
+                      '{value|CDP}'
+                    ].join('\n');
+                  }
+                },
                 rich: {
                   name: {
                     fontSize: 14,
                     fontWeight: 'bold',
                     padding: [0, 0, 4, 0],
                     color: node.type === 'cdp' ? '#fff' : '#333'
+                  },
+                  eimId: {
+                    fontSize: 12,
+                    color: node.type === 'cdp' ? '#fff' : '#666',
+                    padding: [0, 0, 4, 0]
                   },
                   value: {
                     fontSize: 12,
@@ -174,8 +321,8 @@ function DataFlow() {
           links: mainGraph.links.map(link => ({
             ...link,
             lineStyle: {
-              color: 'rgba(0, 0, 0, 0.2)',  
-              width: Math.max(2, Math.log(link.value) * 2),
+              color: 'rgba(0, 0, 0, 0.2)',
+              width: Math.max(1, Math.log(link.value) * 2),
               curveness: 0.2,
               opacity: 0.6,
               type: 'solid',
@@ -218,7 +365,21 @@ function DataFlow() {
           fontSize: 13
         },
         formatter: function(params) {
-          return `<div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
+          if (params.dataType === 'node') {
+            if (params.name === 'CDP') {
+              return `<div style="font-weight: bold; margin-bottom: 4px;">China Data Platform (CDP)</div>
+                      Tables: ${params.value.toLocaleString()}`;
+            } else if (params.data.sourceSystem) {
+              return `<div style="font-weight: bold; margin-bottom: 4px;">${params.data.applicationName}</div>
+                      EIM ID: ${params.data.eimId}<br/>
+                      Tables: ${params.value.toLocaleString()}`;
+            } else {
+              return `<div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
+                      EIM ID: ${params.data.eimId}<br/>
+                      Tables: ${params.value.toLocaleString()}`;
+            }
+          }
+          return `<div style="font-weight: bold; margin-bottom: 4px;">Data Flow</div>
                   Tables: ${params.value.toLocaleString()}`;
         }
       },
@@ -290,26 +451,51 @@ function DataFlow() {
 
   return (
     <div className={classes.root}>
-      <div className={classes.title}>
-        {viewType === 'detail' && (
-          <IconButton className={classes.backButton} onClick={handleBackClick} size="small">
-            <ArrowBack />
-          </IconButton>
+      <div className={classes.header}>
+        <div className={classes.titleSection}>
+          <div className={classes.title}>
+            {viewType === 'detail' && (
+              <IconButton className={classes.backButton} onClick={handleBackClick} size="small">
+                <ArrowBack />
+              </IconButton>
+            )}
+            <Typography variant="h5" component="span">
+              {viewType === 'main' ? 'System Data Flow' : `${selectedNode} Detail View`}
+            </Typography>
+          </div>
+          <Typography className={classes.subtitle}>
+            {viewType === 'main' 
+              ? 'Click on a downstream system to view detailed data flow'
+              : 'Showing detailed data flow for the selected system'
+            }
+          </Typography>
+        </div>
+        {viewType === 'main' && (
+          <div className={classes.filterSection}>
+            <FormControl className={classes.formControl}>
+              <InputLabel id="gbgf-filter-label">GB/GF Filter</InputLabel>
+              <Select
+                labelId="gbgf-filter-label"
+                id="gbgf-filter"
+                value={selectedGBGF}
+                onChange={handleGBGFChange}
+              >
+                {gbgfOptions.map(option => (
+                  <MenuItem key={option} value={option}>
+                    {option === 'all' ? 'All GB/GF' : option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
         )}
-        <Typography variant="h5" component="span">
-          {viewType === 'main' ? 'System Data Flow' : `${selectedNode} Detail View`}
-        </Typography>
       </div>
-      <Typography className={classes.subtitle}>
-        {viewType === 'main' 
-          ? 'Click on a downstream system to view detailed data flow'
-          : 'Showing detailed data flow for the selected system'
-        }
-      </Typography>
       <Fade in={true} timeout={500}>
         <Paper className={classes.flowContainer}>
           <ReactECharts
-            option={viewType === 'main' ? getMainChartOption() : getDetailChartOption(selectedNode)}
+            option={viewType === 'main' 
+              ? getMainChartOption() 
+              : getDetailChartOption(selectedNode)}
             style={{ height: '100%' }}
             onEvents={{
               click: viewType === 'main' ? handleChartClick : undefined

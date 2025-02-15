@@ -1,0 +1,6 @@
+SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,Source File/Table Count,Total CDP Table Count(Include Daliy/Monthly Table),Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
+SYS001,SUB001,Risk Management,EIM12345,Risk Analytics Department,1500,2000,800,EIM98765,Trading Analytics,WPB
+SYS002,SUB002,Customer Data,EIM23456,Customer Relations,2000,2500,1200,EIM87654,Marketing Department,WSB
+SYS003,SUB003,Financial Data,EIM34567,Finance Department,1800,2200,900,EIM76543,Investment Analysis,"WPB,WSB"
+SYS004,SUB004,Market Data,EIM45678,Market Research,2200,2800,1500,EIM65432,Portfolio Management,WPB
+SYS005,SUB005,Transaction Systems,EIM56789,Transaction Processing,1700,2100,1000,EIM54321,Wealth Management,"WPB,WSB"
