@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Switch, Route, useHistory, useLocation } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Toolbar, Typography, IconButton, Tabs, Tab } from '@material-ui/core';
+import { AppBar, Toolbar, Typography, IconButton, Tabs, Tab, CircularProgress } from '@material-ui/core';
 import { Menu as MenuIcon } from '@material-ui/icons';
 import Overview from './components/Overview';
 import DataFlow from './components/DataFlow';
 import Organization from './components/Organization';
+import { useDispatch, useSelector } from 'react-redux';
+import { loadDashboardDataAsync, selectStatus, selectError } from './features/dashboard/dashboardSlice';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
+    backgroundColor: '#0A1929',
+    color: '#fff',
   },
   appBar: {
     backgroundColor: theme.palette.background.paper,
@@ -34,6 +38,18 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
   },
+  loading: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    gap: theme.spacing(2),
+  },
+  error: {
+    padding: theme.spacing(3),
+    color: theme.palette.error.main,
+  }
 }));
 
 const routes = [
@@ -46,10 +62,36 @@ function App() {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
+  const dispatch = useDispatch();
+  const status = useSelector(selectStatus);
+  const error = useSelector(selectError);
+
+  useEffect(() => {
+    dispatch(loadDashboardDataAsync());
+  }, [dispatch]);
 
   const handleTabChange = (_, newPath) => {
     history.push(newPath);
   };
+
+  if (status === 'loading') {
+    return (
+      <div className={classes.loading}>
+        <CircularProgress />
+        <Typography>Loading dashboard data...</Typography>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className={classes.root}>
+        <Typography variant="h6" className={classes.error}>
+          Error loading dashboard data: {error}
+        </Typography>
+      </div>
+    );
+  }
 
   return (
     <div className={classes.root}>
