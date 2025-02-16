@@ -109,58 +109,87 @@ const DataFlow = () => {
     const sourceMap = new Map();
     const downstreamMap = new Map();
     let maxTableCount = 0;
+    let maxCdpTableCount = 0;
+    let maxDownstreamTableCount = 0;
 
+    // 首先计算每个下游系统的总表数
+    const downstreamTotalTables = new Map();
+    dataFlowData.rawData.forEach(row => {
+      const downstreamId = row['Downstream EIM ID'];
+      const downstreamTables = Number(row['Share to Downstream Table Count']) || 0;
+      downstreamTotalTables.set(
+        downstreamId,
+        (downstreamTotalTables.get(downstreamId) || 0) + downstreamTables
+      );
+    });
+
+    // 处理所有数据行
     dataFlowData.rawData.forEach(row => {
       const sourceId = row['Source EIM ID'];
       const sourceName = row['Source Application Name'];
       const sourceSystem = row['Source system'];
+      const sysCode = row['SYS_CODE'];
+      const subSysCode = row['SUB_SYS_CODE'];
       const sourceTableCount = Number(row['Source File/Table Count']) || 0;
-      const cdpTableCount = Number(row['Total CDP Table Count(Include Daliy/Monthly Table)']) || 0;
+      const cdpTableCount = Number(row['Total CDP Table Count']) || 0;
       const downstreamId = row['Downstream EIM ID'];
       const downstreamName = row['Downstream Application Name'];
       const downstreamTableCount = Number(row['Share to Downstream Table Count']) || 0;
       const gbgf = row['GB/GF'];
 
-      if (selectedGbGf !== 'all' && gbgf && !gbgf.split(',').map(g => g.trim()).includes(selectedGbGf)) {
-        return;
+      // 处理 GB/GF 字段，移除双引号并正确分割多个值
+      if (selectedGbGf !== 'all' && gbgf) {
+        const gbgfValues = gbgf.replace(/"/g, '').split(',').map(g => g.trim());
+        if (!gbgfValues.includes(selectedGbGf)) {
+          return;
+        }
       }
 
-      maxTableCount = Math.max(maxTableCount, sourceTableCount, cdpTableCount, downstreamTableCount);
+      // 更新最大值
+      maxTableCount = Math.max(maxTableCount, sourceTableCount);
+      maxCdpTableCount = Math.max(maxCdpTableCount, cdpTableCount);
+      maxDownstreamTableCount = Math.max(maxDownstreamTableCount, downstreamTotalTables.get(downstreamId) || 0);
 
+      // 添加或更新源系统信息
       if (!sourceMap.has(sourceId)) {
         sourceMap.set(sourceId, {
           id: sourceId,
           name: sourceName,
           system: sourceSystem,
+          sysCode: sysCode,
+          subSysCode: subSysCode,
           tables: sourceTableCount,
-          type: 'source'
+          cdpTables: cdpTableCount,
+          type: 'source',
+          gbgf: gbgf
         });
       }
 
+      // 添加或更新下游系统信息
       if (!downstreamMap.has(downstreamId)) {
         downstreamMap.set(downstreamId, {
           id: downstreamId,
           name: downstreamName,
-          tables: downstreamTableCount,
+          tables: downstreamTotalTables.get(downstreamId) || 0,
           type: 'downstream'
         });
       }
     });
 
+    // 设置布局参数
     const containerWidth = 1600;
     const containerHeight = 900;
     const margin = 50;
     const cdpWidth = 200;
-
     const leftWidth = (containerWidth - cdpWidth - margin * 4) / 2;
     const rightWidth = leftWidth;
     const height = containerHeight - margin * 2;
-    
     const leftX = margin;
     const rightX = containerWidth - rightWidth - margin;
     const centerY = containerHeight / 2;
 
-    const getStaggeredPosition = (index, total, baseX, width, baseY, height, padding = 30) => {
+    // 计算节点的交错布局位置
+    const getStaggeredPosition = (index, total, baseX, width, margin, height, padding = 30) => {
       const rows = Math.ceil(Math.sqrt(total * 1.5));
       const cols = Math.ceil(total / rows);
       const row = Math.floor(index / cols);
@@ -174,15 +203,16 @@ const DataFlow = () => {
       
       return {
         x: baseX + padding + col * cellWidth + colOffset,
-        y: baseY + padding + row * cellHeight + cellHeight / 2
+        y: margin + padding + row * cellHeight + cellHeight / 2
       };
     };
 
+    // 添加源系统节点
     Array.from(sourceMap.values()).forEach((node, index) => {
       const pos = getStaggeredPosition(index, sourceMap.size, leftX, leftWidth, margin, height);
       nodes.push({
         id: node.id,
-        name: `${node.system}\n${node.tables}`,
+        name: node.system,
         value: node.tables,
         itemStyle: {
           color: '#67C23A'
@@ -200,7 +230,8 @@ const DataFlow = () => {
           formatter: function(params) {
             return [
               '{bold|' + node.system + '}',
-              'Tables: ' + node.tables
+              node.sysCode,
+              'Tables: ' + node.tables.toLocaleString()
             ].join('\n');
           },
           rich: {
@@ -212,88 +243,38 @@ const DataFlow = () => {
         },
         tooltip: {
           formatter: function(params) {
+            const gbgfStr = node.gbgf ? node.gbgf.replace(/"/g, '') : '';
             return [
               '<div style="font-weight: bold; margin-bottom: 5px;">Source System Details</div>',
-              'Application Name: ' + node.name,
-              'EIM ID: ' + node.id,
               'System: ' + node.system,
-              'Tables: ' + node.tables.toLocaleString()
+              'Application: ' + node.name,
+              'EIM ID: ' + node.id,
+              'System Code: ' + node.sysCode,
+              'Sub System Code: ' + node.subSysCode,
+              'Source Tables: ' + node.tables.toLocaleString(),
+              'CDP Tables: ' + node.cdpTables.toLocaleString(),
+              'GB/GF: ' + gbgfStr
             ].join('<br/>');
           }
         }
       });
 
+      // 添加到 CDP 的连接
       links.push({
         source: node.id,
         target: 'CDP',
+        value: node.cdpTables,
+        symbolSize: [4, 8],
         lineStyle: {
           color: '#67C23A',
           opacity: 0.6,
-          width: Math.max(1, Math.sqrt(node.tables / maxTableCount) * 3),
+          width: Math.max(1, Math.sqrt(node.cdpTables / maxCdpTableCount) * 3),
           curveness: 0.3
         }
       });
     });
 
-    Array.from(downstreamMap.values()).forEach((node, index) => {
-      const pos = getStaggeredPosition(index, downstreamMap.size, rightX, rightWidth, margin, height);
-      nodes.push({
-        id: node.id,
-        name: node.name,
-        value: node.tables,
-        itemStyle: {
-          color: '#E6A23C',
-          cursor: 'pointer'  
-        },
-        x: pos.x,
-        y: pos.y,
-        symbol: 'circle',
-        symbolSize: Math.max(15, Math.sqrt(node.tables / maxTableCount) * 35),
-        category: 'downstream',
-        label: {
-          show: true,
-          position: 'right',
-          distance: 5,
-          fontSize: 10,
-          formatter: function(params) {
-            return [
-              '{bold|' + node.name + '}',
-              'EIM ID: ' + node.id,
-              'Tables: ' + node.tables
-            ].join('\n');
-          },
-          rich: {
-            bold: {
-              fontWeight: 'bold',
-              fontSize: 10
-            }
-          }
-        },
-        tooltip: {
-          formatter: function(params) {
-            return [
-              '<div style="font-weight: bold; margin-bottom: 5px;">Downstream System Details</div>',
-              'Application Name: ' + node.name,
-              'EIM ID: ' + node.id,
-              'Tables: ' + node.tables.toLocaleString(),
-              '<div style="color: #E6A23C; margin-top: 5px;">Click to view details</div>'
-            ].join('<br/>');
-          }
-        }
-      });
-
-      links.push({
-        source: 'CDP',
-        target: node.id,
-        lineStyle: {
-          color: '#E6A23C',
-          opacity: 0.6,
-          width: Math.max(1, Math.sqrt(node.tables / maxTableCount) * 3),
-          curveness: 0.3
-        }
-      });
-    });
-
+    // 添加 CDP 节点
     nodes.push({
       id: 'CDP',
       name: 'CDP',
@@ -312,6 +293,68 @@ const DataFlow = () => {
         color: '#fff',
         formatter: 'CDP'
       }
+    });
+
+    // 添加下游系统节点
+    Array.from(downstreamMap.values()).forEach((node, index) => {
+      const pos = getStaggeredPosition(index, downstreamMap.size, rightX, rightWidth, margin, height);
+      nodes.push({
+        id: node.id,
+        name: node.name,
+        value: node.tables,
+        itemStyle: {
+          color: '#E6A23C',
+          cursor: 'pointer'
+        },
+        x: pos.x,
+        y: pos.y,
+        symbol: 'circle',
+        symbolSize: Math.max(15, Math.sqrt(node.tables / maxDownstreamTableCount) * 35),
+        category: 'downstream',
+        label: {
+          show: true,
+          position: 'right',
+          distance: 5,
+          fontSize: 10,
+          formatter: function(params) {
+            return [
+              '{bold|' + node.name + '}',
+              'Tables: ' + node.tables.toLocaleString()
+            ].join('\n');
+          },
+          rich: {
+            bold: {
+              fontWeight: 'bold',
+              fontSize: 10
+            }
+          }
+        },
+        tooltip: {
+          formatter: function(params) {
+            return [
+              '<div style="font-weight: bold; margin-bottom: 5px;">Downstream System Details</div>',
+              'Application: ' + node.name,
+              'EIM ID: ' + node.id,
+              'Total Tables: ' + node.tables.toLocaleString(),
+              '<div style="color: #E6A23C; margin-top: 5px;">Click to view details</div>'
+            ].join('<br/>');
+          }
+        }
+      });
+
+      // 添加从 CDP 到下游系统的连接
+      links.push({
+        source: 'CDP',
+        target: node.id,
+        value: node.tables,
+        symbolSize: [4, 8],
+        lineStyle: {
+          color: '#E6A23C',
+          opacity: 0.6,
+          width: Math.max(1, Math.sqrt(node.tables / maxDownstreamTableCount) * 3),
+          curveness: 0.3
+        }
+      });
     });
 
     return {
@@ -349,8 +392,10 @@ const DataFlow = () => {
       const sourceId = row['Source EIM ID'];
       const sourceName = row['Source Application Name'];
       const sourceSystem = row['Source system'];
+      const sysCode = row['SYS_CODE'];
+      const subSysCode = row['SUB_SYS_CODE'];
       const sourceTableCount = Number(row['Source File/Table Count']) || 0;
-      const cdpTableCount = Number(row['Total CDP Table Count(Include Daliy/Monthly Table)']) || 0;
+      const cdpTableCount = Number(row['Total CDP Table Count']) || 0;
       const sharedTableCount = Number(row['Share to Downstream Table Count']) || 0;
 
       if (!sourceNodes.has(sourceId)) {
@@ -358,6 +403,8 @@ const DataFlow = () => {
           id: sourceId,
           name: sourceName,
           system: sourceSystem,
+          sysCode: sysCode,
+          subSysCode: subSysCode,
           sourceTables: sourceTableCount,
           cdpTables: cdpTableCount,
           sharedTables: sharedTableCount
@@ -458,6 +505,9 @@ const DataFlow = () => {
             return params.data.tooltip?.formatter?.(params) || 
                    `${params.name}<br/>Tables: ${params.value}`;
           }
+          if (params.dataType === 'edge') {
+            return `Tables: ${params.data.value}`;
+          }
           return '';
         }
       },
@@ -478,11 +528,10 @@ const DataFlow = () => {
           focus: 'adjacency',
           lineStyle: { width: 4 }
         },
-        force: {
-          repulsion: 1500,
-          gravity: 0.05,
-          edgeLength: 300,
-          layoutAnimation: true
+        lineStyle: {
+          opacity: 0.6,
+          width: 1,
+          curveness: 0.3
         },
         itemStyle: {
           borderWidth: 2,

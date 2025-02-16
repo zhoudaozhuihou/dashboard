@@ -1,21 +1,66 @@
-SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,Source File/Table Count,Total CDP Table Count(Include Daliy/Monthly Table),Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
-SYS001,SUB001,Risk Management,EIM12345,Risk Analytics Department,1500,2000,800,EIM98765,Trading Analytics,WPB
-SYS002,SUB002,Customer Data,EIM23456,Customer Relations,2000,2500,1200,EIM87654,Marketing Department,WSB
-SYS003,SUB003,Financial Data,EIM34567,Finance Department,1800,2200,900,EIM76543,Investment Analysis,WPB,WSB
-SYS004,SUB004,Market Data,EIM45678,Market Research Team,1600,1800,700,EIM65432,Risk Management,WPB
-SYS005,SUB005,Transaction System,EIM56789,Transaction Processing,2200,2800,1500,EIM54321,Customer Service,WSB
-SYS006,SUB006,Product Data,EIM67890,Product Management,1400,1600,600,EIM98765,Trading Analytics,WPB
-SYS007,SUB007,Compliance Data,EIM78901,Compliance Department,1700,2100,800,EIM87654,Marketing Department,WSB
-SYS008,SUB008,Analytics Platform,EIM89012,Analytics Team,2500,3000,1400,EIM76543,Investment Analysis,WPB,WSB
-SYS009,SUB009,Trading Platform,EIM90123,Trading Operations,3000,3500,1800,EIM65432,Risk Management,WPB
-SYS010,SUB010,Client Database,EIM01234,Client Services,2800,3200,1600,EIM54321,Customer Service,WSB
-SYS011,SUB011,Research Data,EIM11223,Research Department,1900,2300,1000,EIM98765,Trading Analytics,WPB
-SYS012,SUB012,Credit System,EIM22334,Credit Analysis,2100,2600,1300,EIM87654,Marketing Department,WSB
-SYS013,SUB013,Investment Data,EIM33445,Investment Operations,2400,2900,1100,EIM76543,Investment Analysis,WPB,WSB
-SYS014,SUB014,Market Intelligence,EIM44556,Market Intelligence Unit,1300,1700,500,EIM65432,Risk Management,WPB
-SYS015,SUB015,Payment System,EIM55667,Payment Processing,2600,3100,1700,EIM54321,Customer Service,WSB
-SYS016,SUB016,Portfolio Data,EIM66778,Portfolio Management,2000,2400,1200,EIM98765,Trading Analytics,WPB
-SYS017,SUB017,Wealth Data,EIM77889,Wealth Management,2300,2700,1400,EIM87654,Marketing Department,WSB
-SYS018,SUB018,Asset Management,EIM88990,Asset Management Team,2700,3300,1600,EIM76543,Investment Analysis,WPB,WSB
-SYS019,SUB019,Risk Analytics,EIM99001,Risk Assessment Team,1800,2200,900,EIM65432,Risk Management,WPB
-SYS020,SUB020,Customer Analytics,EIM00112,Customer Analytics Team,2900,3400,1900,EIM54321,Customer Service,WSB
+SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,Source File/Table Count,Total CDP Table Count,Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
+AAR,AAR01,AAR System,11092884,Wealth Dashboard China ALI CN,150,180,120,11233211,Customer Data Platform,"WPB,WSB"
+AAR,AAR02,AAR System,11092885,Investment Portfolio Analytics,180,220,150,11233212,Investment Analytics Platform,WPB
+AAR,AAR03,AAR System,11092886,Risk Assessment Module,200,240,160,11233213,Risk Management Platform,"WPB,WSB"
+CIF,CIF01,Customer Info,11092887,Customer Profile Management,250,300,200,11233211,Customer Data Platform,"WPB,WSB"
+CIF,CIF02,Customer Info,11092888,Account Management System,220,260,180,11233214,Account Analytics Platform,WSB
+CIF,CIF03,Customer Info,11092889,Customer Service System,180,220,150,11233215,Service Analytics Platform,"WPB,WSB"
+CMS,CMS01,Content System,11092890,Document Management,160,200,130,11233216,Content Analytics Platform,WPB
+CMS,CMS02,Content System,11092891,Media Asset Management,140,170,110,11233217,Media Analytics Platform,WSB
+CMS,CMS03,Content System,11092892,Web Content System,190,230,150,11233218,Web Analytics Platform,"WPB,WSB"
+DWH,DWH01,Data Warehouse,11092893,Transaction Data Store,300,360,240,11233219,Transaction Analytics Platform,WPB
+DWH,DWH02,Data Warehouse,11092894,Customer Data Store,280,340,220,11233220,Customer Analytics Platform,WSB
+DWH,DWH03,Data Warehouse,11092895,Product Data Store,260,320,200,11233221,Product Analytics Platform,"WPB,WSB"
+ERP,ERP01,Enterprise Resource,11092896,Financial Management,240,290,190,11233222,Financial Analytics Platform,WPB
+ERP,ERP02,Enterprise Resource,11092897,Human Resource Management,200,240,160,11233223,HR Analytics Platform,WSB
+ERP,ERP03,Enterprise Resource,11092898,Supply Chain Management,220,260,180,11233224,Supply Chain Analytics Platform,"WPB,WSB"
+FMS,FMS01,Financial Management,11092899,Accounting System,180,220,150,11233225,Accounting Analytics Platform,WPB
+FMS,FMS02,Financial Management,11092900,Budgeting System,160,200,130,11233226,Budgeting Analytics Platform,WSB
+FMS,FMS03,Financial Management,11092901,Financial Reporting,190,230,150,11233227,Financial Reporting Analytics Platform,"WPB,WSB"
+IBS,IBS01,Internet Banking,11092902,Online Banking,250,300,200,11233228,Online Banking Analytics Platform,WPB
+IBS,IBS02,Internet Banking,11092903,Mobile Banking,220,260,180,11233229,Mobile Banking Analytics Platform,WSB
+IBS,IBS03,Internet Banking,11092904,Payment Gateway,200,240,160,11233230,Payment Gateway Analytics Platform,"WPB,WSB"
+LMS,LMS01,Loan Management,11092905,Loan Origination,240,290,190,11233231,Loan Origination Analytics Platform,WPB
+LMS,LMS02,Loan Management,11092906,Loan Servicing,200,240,160,11233232,Loan Servicing Analytics Platform,WSB
+LMS,LMS03,Loan Management,11092907,Credit Scoring,220,260,180,11233233,Credit Scoring Analytics Platform,"WPB,WSB"
+MBS,MBS01,Mobile Banking,11092908,Mobile Wallet,180,220,150,11233234,Mobile Wallet Analytics Platform,WPB
+MBS,MBS02,Mobile Banking,11092909,Mobile Payment,160,200,130,11233235,Mobile Payment Analytics Platform,WSB
+MBS,MBS03,Mobile Banking,11092910,Mobile Banking App,190,230,150,11233236,Mobile Banking App Analytics Platform,"WPB,WSB"
+PMS,PMS01,Portfolio Management,11092911,Portfolio Optimization,250,300,200,11233237,Portfolio Optimization Analytics Platform,WPB
+PMS,PMS02,Portfolio Management,11092912,Portfolio Monitoring,220,260,180,11233238,Portfolio Monitoring Analytics Platform,WSB
+PMS,PMS03,Portfolio Management,11092913,Portfolio Reporting,200,240,160,11233239,Portfolio Reporting Analytics Platform,"WPB,WSB"
+RMS,RMS01,Risk Management,11092914,Risk Assessment,240,290,190,11233240,Risk Assessment Analytics Platform,WPB
+RMS,RMS02,Risk Management,11092915,Risk Monitoring,200,240,160,11233241,Risk Monitoring Analytics Platform,WSB
+RMS,RMS03,Risk Management,11092916,Risk Reporting,220,260,180,11233242,Risk Reporting Analytics Platform,"WPB,WSB"
+TMS,TMS01,Trading Management,11092917,Trading Platform,180,220,150,11233243,Trading Platform Analytics Platform,WPB
+TMS,TMS02,Trading Management,11092918,Order Management,160,200,130,11233244,Order Management Analytics Platform,WSB
+TMS,TMS03,Trading Management,11092919,Risk Management,190,230,150,11233245,Risk Management Analytics Platform,"WPB,WSB"
+WMS,WMS01,Wealth Management,11092920,Wealth Planning,250,300,200,11233246,Wealth Planning Analytics Platform,WPB
+WMS,WMS02,Wealth Management,11092921,Investment Management,220,260,180,11233247,Investment Management Analytics Platform,WSB
+WMS,WMS03,Wealth Management,11092922,Portfolio Management,200,240,160,11233248,Portfolio Management Analytics Platform,"WPB,WSB"
+AAR,AAR04,AAR System,11092923,Performance Analytics,190,230,150,11233249,Performance Platform,WPB
+AAR,AAR05,AAR System,11092924,Client Reporting,170,210,130,11233250,Reporting Platform,WSB
+CIF,CIF04,Customer Info,11092925,KYC System,250,300,200,11233251,KYC Analytics Platform,"WPB,WSB"
+CIF,CIF05,Customer Info,11092926,Customer Onboarding,230,280,180,11233252,Onboarding Analytics,WPB
+CMS,CMS04,Content System,11092927,Digital Asset Management,210,260,160,11233253,Digital Asset Analytics,WSB
+CMS,CMS05,Content System,11092928,Knowledge Management,190,230,140,11233254,Knowledge Analytics,"WPB,WSB"
+DWH,DWH04,Data Warehouse,11092929,Market Data Store,270,330,210,11233255,Market Data Analytics,WPB
+DWH,DWH05,Data Warehouse,11092930,Reference Data Store,250,300,190,11233256,Reference Data Analytics,WSB
+ERP,ERP04,Enterprise Resource,11092931,Asset Management,230,280,170,11233257,Asset Analytics,"WPB,WSB"
+ERP,ERP05,Enterprise Resource,11092932,Procurement System,210,260,150,11233258,Procurement Analytics,WPB
+FMS,FMS04,Financial Management,11092933,Treasury Management,290,350,230,11233259,Treasury Analytics,WSB
+FMS,FMS05,Financial Management,11092934,Tax Management,270,330,210,11233260,Tax Analytics,"WPB,WSB"
+IBS,IBS04,Internet Banking,11092935,Investment Platform,250,300,190,11233261,Investment Analytics,WPB
+IBS,IBS05,Internet Banking,11092936,FX Trading Platform,230,280,170,11233262,FX Analytics,WSB
+LMS,LMS04,Loan Management,11092937,Credit Card System,210,260,150,11233263,Credit Card Analytics,"WPB,WSB"
+LMS,LMS05,Loan Management,11092938,Auto Loan System,190,230,130,11233264,Auto Loan Analytics,WPB
+MBS,MBS04,Mobile Banking,11092939,Mobile Wealth,270,330,210,11233265,Mobile Wealth Analytics,WSB
+MBS,MBS05,Mobile Banking,11092940,Mobile Insurance,250,300,190,11233266,Insurance Analytics,"WPB,WSB"
+PMS,PMS04,Portfolio Management,11092941,Alternative Investment,230,280,170,11233267,Alternative Investment Analytics,WPB
+PMS,PMS05,Portfolio Management,11092942,Structured Products,210,260,150,11233268,Structured Products Analytics,WSB
+RMS,RMS04,Risk Management,11092943,Liquidity Risk,290,350,230,11233269,Liquidity Risk Analytics,"WPB,WSB"
+RMS,RMS05,Risk Management,11092944,Compliance Risk,270,330,210,11233270,Compliance Analytics,WPB
+TMS,TMS04,Trading Management,11092945,Derivatives Trading,250,300,190,11233271,Derivatives Analytics,WSB
+TMS,TMS05,Trading Management,11092946,Commodity Trading,230,280,170,11233272,Commodity Analytics,"WPB,WSB"
+WMS,WMS04,Wealth Management,11092947,Estate Planning,210,260,150,11233273,Estate Planning Analytics,WPB
+WMS,WMS05,Wealth Management,11092948,Trust Management,190,230,130,11233274,Trust Analytics,WSB
