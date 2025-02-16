@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Toolbar, Typography, Container, Button, CssBaseline, Grid } from '@material-ui/core';
+import { AppBar, Toolbar, Typography, Container, Button, CssBaseline, Grid, Tabs, Tab } from '@material-ui/core';
 import Overview from './components/Overview';
 import DataFlow from './components/DataFlow';
+import SankeyFlow from './components/SankeyFlow';
 import { loadDashboardDataAsync } from './features/dashboard/dashboardSlice';
 
 const useStyles = makeStyles((theme) => ({
@@ -65,6 +66,9 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: 24,
     overflow: 'auto'
+  },
+  tabs: {
+    marginLeft: 32
   }
 }));
 
@@ -78,7 +82,7 @@ function App() {
     dispatch(loadDashboardDataAsync());
   }, [dispatch]);
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = (event, tab) => {
     setActiveTab(tab);
   };
 
@@ -91,21 +95,22 @@ function App() {
             <div className={classes.logo} />
             <div className={classes.title}>CDP Dashboard</div>
           </div>
-          <button
-            className={`${classes.tabButton} ${activeTab === 'overview' ? classes.activeTab : ''}`}
-            onClick={() => handleTabChange('overview')}
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            textColor="primary"
+            indicatorColor="primary"
+            className={classes.tabs}
           >
-            Overview
-          </button>
-          <button
-            className={`${classes.tabButton} ${activeTab === 'dataflow' ? classes.activeTab : ''}`}
-            onClick={() => handleTabChange('dataflow')}
-          >
-            Data Flow
-          </button>
+            <Tab label="Overview" value="overview" />
+            <Tab label="Data Flow" value="dataflow" />
+            <Tab label="Sankey Flow" value="sankeyflow" />
+          </Tabs>
         </div>
         <Container maxWidth={false} className={classes.content}>
-          {activeTab === 'overview' ? <Overview /> : <DataFlow />}
+          {activeTab === 'overview' && <Overview />}
+          {activeTab === 'dataflow' && <DataFlow />}
+          {activeTab === 'sankeyflow' && <SankeyFlow />}
         </Container>
       </div>
     </Router>
