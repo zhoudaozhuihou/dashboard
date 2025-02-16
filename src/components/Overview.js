@@ -78,22 +78,29 @@ function Overview() {
   return (
     <div className={classes.root}>
       <Typography variant="h5" className={classes.title}>
-        CDP Overview
+        Dashboard Overview
       </Typography>
       <Grid container spacing={3}>
         {kpiData.map((kpi, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
             <Paper className={classes.paper}>
-              <Typography variant="h4" className={classes.kpiValue}>
+              <Typography className={classes.kpiValue}>
                 {kpi.value}
               </Typography>
               <Typography className={classes.kpiLabel}>
                 {kpi.label}
               </Typography>
-              <div className={`${classes.kpiChange} ${kpi.change >= 0 ? classes.positive : classes.negative}`}>
-                {kpi.change >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                <Typography variant="body2">
-                  {Math.abs(kpi.change)}% vs last month
+              <div className={classes.kpiChange}>
+                {kpi.change > 0 ? (
+                  <TrendingUpIcon className={classes.positive} fontSize="small" />
+                ) : (
+                  <TrendingDownIcon className={classes.negative} fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  className={kpi.change > 0 ? classes.positive : classes.negative}
+                >
+                  {Math.abs(kpi.change)}%
                 </Typography>
               </div>
             </Paper>

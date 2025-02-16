@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
@@ -10,51 +10,66 @@ import { loadDashboardDataAsync } from './features/dashboard/dashboardSlice';
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
-    backgroundColor: '#ffffff',
-    minHeight: '100vh'
+    flexDirection: 'column',
+    height: '100vh',
+    backgroundColor: '#f0f2f5'
   },
-  appBar: {
-    backgroundColor: '#ffffff',
-    color: '#333333',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-  },
-  titleSection: {
+  header: {
     display: 'flex',
     alignItems: 'center',
-    flexGrow: 1
+    padding: '16px 24px',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  },
+  logoSection: {
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: 32
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#e6f7ff',
+    borderRadius: 8,
+    marginRight: 16
   },
   title: {
-    marginRight: theme.spacing(4),
-    fontWeight: 500
+    fontSize: 20,
+    fontWeight: 600,
+    color: '#1890ff',
+    marginRight: 48
   },
-  navButtons: {
-    display: 'flex',
-    alignItems: 'center'
-  },
-  navButton: {
-    marginRight: theme.spacing(2),
-    color: '#666666',
-    textTransform: 'none',
-    fontSize: '1rem',
+  tabButton: {
+    marginRight: 16,
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 500,
+    backgroundColor: 'transparent',
+    color: '#666',
+    transition: 'all 0.3s',
     '&:hover': {
-      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+      backgroundColor: '#f5f5f5'
     }
   },
-  activeNavButton: {
-    color: '#1976d2',
-    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+  activeTab: {
+    backgroundColor: '#1890ff',
+    color: '#ffffff',
     '&:hover': {
-      backgroundColor: 'rgba(25, 118, 210, 0.12)'
+      backgroundColor: '#40a9ff'
     }
   },
   content: {
-    flexGrow: 1,
-    padding: theme.spacing(3),
-    backgroundColor: '#ffffff'
+    flex: 1,
+    padding: 24,
+    overflow: 'auto'
   }
 }));
 
 function App() {
+  const [activeTab, setActiveTab] = useState('overview');
   const classes = useStyles();
   const dispatch = useDispatch();
   const location = useLocation();
@@ -63,41 +78,34 @@ function App() {
     dispatch(loadDashboardDataAsync());
   }, [dispatch]);
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
     <Router>
       <div className={classes.root}>
         <CssBaseline />
-        <AppBar position="fixed" className={classes.appBar}>
-          <Toolbar>
-            <div className={classes.titleSection}>
-              <Typography variant="h6" className={classes.title}>
-                CDP Dashboard
-              </Typography>
-              <div className={classes.navButtons}>
-                <Button
-                  component={Link}
-                  to="/"
-                  className={`${classes.navButton} ${location.pathname === '/' ? classes.activeNavButton : ''}`}
-                >
-                  Overview
-                </Button>
-                <Button
-                  component={Link}
-                  to="/dataflow"
-                  className={`${classes.navButton} ${location.pathname === '/dataflow' ? classes.activeNavButton : ''}`}
-                >
-                  Data Flow
-                </Button>
-              </div>
-            </div>
-          </Toolbar>
-        </AppBar>
+        <div className={classes.header}>
+          <div className={classes.logoSection}>
+            <div className={classes.logo} />
+            <div className={classes.title}>CDP Dashboard</div>
+          </div>
+          <button
+            className={`${classes.tabButton} ${activeTab === 'overview' ? classes.activeTab : ''}`}
+            onClick={() => handleTabChange('overview')}
+          >
+            Overview
+          </button>
+          <button
+            className={`${classes.tabButton} ${activeTab === 'dataflow' ? classes.activeTab : ''}`}
+            onClick={() => handleTabChange('dataflow')}
+          >
+            Data Flow
+          </button>
+        </div>
         <Container maxWidth={false} className={classes.content}>
-          <Toolbar />
-          <Switch>
-            <Route exact path="/" component={Overview} />
-            <Route path="/dataflow" component={DataFlow} />
-          </Switch>
+          {activeTab === 'overview' ? <Overview /> : <DataFlow />}
         </Container>
       </div>
     </Router>
