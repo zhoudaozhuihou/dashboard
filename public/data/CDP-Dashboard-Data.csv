@@ -1,6 +1,21 @@
 SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,Source File/Table Count,Total CDP Table Count(Include Daliy/Monthly Table),Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
 SYS001,SUB001,Risk Management,EIM12345,Risk Analytics Department,1500,2000,800,EIM98765,Trading Analytics,WPB
 SYS002,SUB002,Customer Data,EIM23456,Customer Relations,2000,2500,1200,EIM87654,Marketing Department,WSB
-SYS003,SUB003,Financial Data,EIM34567,Finance Department,1800,2200,900,EIM76543,Investment Analysis,"WPB,WSB"
-SYS004,SUB004,Market Data,EIM45678,Market Research,2200,2800,1500,EIM65432,Portfolio Management,WPB
-SYS005,SUB005,Transaction Systems,EIM56789,Transaction Processing,1700,2100,1000,EIM54321,Wealth Management,"WPB,WSB"
+SYS003,SUB003,Financial Data,EIM34567,Finance Department,1800,2200,900,EIM76543,Investment Analysis,WPB,WSB
+SYS004,SUB004,Market Data,EIM45678,Market Research Team,1600,1800,700,EIM65432,Risk Management,WPB
+SYS005,SUB005,Transaction System,EIM56789,Transaction Processing,2200,2800,1500,EIM54321,Customer Service,WSB
+SYS006,SUB006,Product Data,EIM67890,Product Management,1400,1600,600,EIM98765,Trading Analytics,WPB
+SYS007,SUB007,Compliance Data,EIM78901,Compliance Department,1700,2100,800,EIM87654,Marketing Department,WSB
+SYS008,SUB008,Analytics Platform,EIM89012,Analytics Team,2500,3000,1400,EIM76543,Investment Analysis,WPB,WSB
+SYS009,SUB009,Trading Platform,EIM90123,Trading Operations,3000,3500,1800,EIM65432,Risk Management,WPB
+SYS010,SUB010,Client Database,EIM01234,Client Services,2800,3200,1600,EIM54321,Customer Service,WSB
+SYS011,SUB011,Research Data,EIM11223,Research Department,1900,2300,1000,EIM98765,Trading Analytics,WPB
+SYS012,SUB012,Credit System,EIM22334,Credit Analysis,2100,2600,1300,EIM87654,Marketing Department,WSB
+SYS013,SUB013,Investment Data,EIM33445,Investment Operations,2400,2900,1100,EIM76543,Investment Analysis,WPB,WSB
+SYS014,SUB014,Market Intelligence,EIM44556,Market Intelligence Unit,1300,1700,500,EIM65432,Risk Management,WPB
+SYS015,SUB015,Payment System,EIM55667,Payment Processing,2600,3100,1700,EIM54321,Customer Service,WSB
+SYS016,SUB016,Portfolio Data,EIM66778,Portfolio Management,2000,2400,1200,EIM98765,Trading Analytics,WPB
+SYS017,SUB017,Wealth Data,EIM77889,Wealth Management,2300,2700,1400,EIM87654,Marketing Department,WSB
+SYS018,SUB018,Asset Management,EIM88990,Asset Management Team,2700,3300,1600,EIM76543,Investment Analysis,WPB,WSB
+SYS019,SUB019,Risk Analytics,EIM99001,Risk Assessment Team,1800,2200,900,EIM65432,Risk Management,WPB
+SYS020,SUB020,Customer Analytics,EIM00112,Customer Analytics Team,2900,3400,1900,EIM54321,Customer Service,WSB

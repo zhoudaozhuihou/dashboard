@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Toolbar, Typography, Container, Button } from '@material-ui/core';
+import { AppBar, Toolbar, Typography, Container, Button, CssBaseline, Grid } from '@material-ui/core';
 import Overview from './components/Overview';
 import DataFlow from './components/DataFlow';
 import { loadDashboardDataAsync } from './features/dashboard/dashboardSlice';
@@ -10,47 +10,54 @@ import { loadDashboardDataAsync } from './features/dashboard/dashboardSlice';
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#ffffff',
+    minHeight: '100vh'
   },
   appBar: {
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
+    color: '#333333',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
   },
-  toolbar: {
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+  titleSection: {
+    display: 'flex',
+    alignItems: 'center',
+    flexGrow: 1
   },
   title: {
     marginRight: theme.spacing(4),
-    color: '#fff',
+    fontWeight: 500
+  },
+  navButtons: {
+    display: 'flex',
+    alignItems: 'center'
   },
   navButton: {
     marginRight: theme.spacing(2),
-    color: '#9ca3af',
+    color: '#666666',
+    textTransform: 'none',
+    fontSize: '1rem',
     '&:hover': {
-      color: '#fff',
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    },
+      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+    }
   },
   activeNavButton: {
-    color: '#fff',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#1976d2',
+    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+    '&:hover': {
+      backgroundColor: 'rgba(25, 118, 210, 0.12)'
+    }
   },
   content: {
     flexGrow: 1,
-    paddingTop: theme.spacing(8),
-  },
+    padding: theme.spacing(3),
+    backgroundColor: '#ffffff'
+  }
 }));
-
-const navItems = [
-  { path: '/', label: 'Overview' },
-  { path: '/dataflow', label: 'Data Flow' },
-];
 
 function App() {
   const classes = useStyles();
   const dispatch = useDispatch();
+  const location = useLocation();
 
   useEffect(() => {
     dispatch(loadDashboardDataAsync());
@@ -59,24 +66,34 @@ function App() {
   return (
     <Router>
       <div className={classes.root}>
-        <AppBar position="fixed" className={classes.appBar} elevation={0}>
-          <Toolbar className={classes.toolbar}>
-            <Typography variant="h6" className={classes.title}>
-              Data Analytics Dashboard
-            </Typography>
-            {navItems.map((item) => (
-              <Button
-                key={item.path}
-                component={Link}
-                to={item.path}
-                className={classes.navButton}
-              >
-                {item.label}
-              </Button>
-            ))}
+        <CssBaseline />
+        <AppBar position="fixed" className={classes.appBar}>
+          <Toolbar>
+            <div className={classes.titleSection}>
+              <Typography variant="h6" className={classes.title}>
+                CDP Dashboard
+              </Typography>
+              <div className={classes.navButtons}>
+                <Button
+                  component={Link}
+                  to="/"
+                  className={`${classes.navButton} ${location.pathname === '/' ? classes.activeNavButton : ''}`}
+                >
+                  Overview
+                </Button>
+                <Button
+                  component={Link}
+                  to="/dataflow"
+                  className={`${classes.navButton} ${location.pathname === '/dataflow' ? classes.activeNavButton : ''}`}
+                >
+                  Data Flow
+                </Button>
+              </div>
+            </div>
           </Toolbar>
         </AppBar>
         <Container maxWidth={false} className={classes.content}>
+          <Toolbar />
           <Switch>
             <Route exact path="/" component={Overview} />
             <Route path="/dataflow" component={DataFlow} />

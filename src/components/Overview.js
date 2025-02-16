@@ -8,19 +8,22 @@ const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
     padding: theme.spacing(3),
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#ffffff',
     minHeight: 'calc(100vh - 64px)',
   },
   title: {
-    color: '#fff',
-    marginBottom: theme.spacing(2),
+    color: '#333333',
+    marginBottom: theme.spacing(3),
+    fontWeight: 500
   },
   paper: {
     padding: theme.spacing(3),
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderRadius: theme.spacing(1)
   },
   kpiValue: {
     fontSize: '2rem',
@@ -75,7 +78,7 @@ function Overview() {
   return (
     <div className={classes.root}>
       <Typography variant="h5" className={classes.title}>
-        System Overview
+        CDP Overview
       </Typography>
       <Grid container spacing={3}>
         {kpiData.map((kpi, index) => (
