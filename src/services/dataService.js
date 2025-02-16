@@ -51,46 +51,63 @@ const transformMainGraph = (data) => {
   };
   nodes.push(cdpNode);
 
-  // 处理源系统，并记录它们的 GB/GF 关系
+  // 处理源系统
   const sourceNodes = new Map();
-  const sourceGbGf = new Map(); // 用于存储源系统的 GB/GF 关系
-
-  data.forEach((row, index) => {
-    if (row['Source system'] && !sourceNodes.has(row['Source system'])) {
-      const sourceId = `source_${index}`;
-      const sourceValue = Number(row['Source File/Table Count']) || 0;
-      sourceNodes.set(row['Source system'], {
-        id: sourceId,
-        name: row['Source system'],
-        type: 'source',
-        value: sourceValue,
-        symbolSize: Math.max(30, Math.min(70, Math.sqrt(sourceValue) * 2)),
-        applicationName: row['Source Application Name'],
-        eimId: row['Source EIM ID'],
-        x: 100,
-        y: (index + 1) * 100
+  
+  // 首先按SYS_CODE和SUB_SYS_CODE组合分组收集所有数据
+  const sourceGroups = new Map();
+  data.forEach(row => {
+    const sysCode = row['SYS_CODE'] || '';
+    const subSysCode = row['SUB_SYS_CODE'] || '';
+    const key = `${sysCode}:${subSysCode}`;
+    
+    if (!sourceGroups.has(key)) {
+      sourceGroups.set(key, {
+        sysCode,
+        subSysCode,
+        eimIds: new Set(),
+        applicationNames: new Set(),
+        totalTables: 0
       });
-
-      // 记录源系统的 GB/GF
-      if (!sourceGbGf.has(row['Source system'])) {
-        sourceGbGf.set(row['Source system'], new Set());
-      }
-      if (row['GB/GF']) {
-        row['GB/GF'].split(',').forEach(gbgf => 
-          sourceGbGf.get(row['Source system']).add(gbgf.trim())
-        );
-      }
-    } else if (row['Source system'] && row['GB/GF']) {
-      // 为已存在的源系统添加新的 GB/GF
-      row['GB/GF'].split(',').forEach(gbgf => 
-        sourceGbGf.get(row['Source system']).add(gbgf.trim())
-      );
     }
+    
+    const group = sourceGroups.get(key);
+    if (row['Source EIM ID']) {
+      group.eimIds.add(row['Source EIM ID']);
+    }
+    if (row['Source Application Name']) {
+      group.applicationNames.add(row['Source Application Name']);
+    }
+    group.totalTables += Number(row['Share to Downstream Table Count']) || 0;
+  });
+
+  // 创建源系统节点
+  Array.from(sourceGroups.entries()).forEach(([key, group], index) => {
+    // 获取去重后的EIM IDs数组，如果为空则使用['None']
+    const eimIdsArray = Array.from(group.eimIds);
+    const eimId = eimIdsArray.length > 0 ? eimIdsArray[0] : 'None';
+    
+    // 获取应用名称数组的第一个值
+    const applicationNames = Array.from(group.applicationNames);
+    const applicationName = applicationNames.length > 0 ? applicationNames[0] : 'Unknown';
+
+    sourceNodes.set(key, {
+      id: `source_${index}`,
+      name: applicationName,
+      type: 'source',
+      value: group.totalTables,
+      symbolSize: Math.max(30, Math.min(70, Math.sqrt(group.totalTables) * 2)),
+      eimId: eimId,
+      sysCode: group.sysCode,
+      subSysCode: group.subSysCode,
+      x: 300,
+      y: (index + 1) * 100
+    });
   });
 
   // 将 GB/GF 信息添加到源系统节点
   sourceNodes.forEach((node, sourceName) => {
-    const gbgfSet = sourceGbGf.get(sourceName);
+    const gbgfSet = new Set(data.filter(row => row['SYS_CODE'] === node.sysCode && row['SUB_SYS_CODE'] === node.subSysCode).map(row => row['GB/GF']));
     node.gbgf = gbgfSet ? Array.from(gbgfSet).join(',') : '';
     nodes.push(node);
   });
@@ -116,9 +133,29 @@ const transformMainGraph = (data) => {
   });
   nodes.push(...targetNodes.values());
 
+  // 创建连接关系
+  data.forEach((row) => {
+    const sysCode = row['SYS_CODE'] || '';
+    const subSysCode = row['SUB_SYS_CODE'] || '';
+    const sourceKey = `${sysCode}:${subSysCode}`;
+    const sourceNode = sourceNodes.get(sourceKey);
+    const targetNode = targetNodes.get(row['Downstream Application Name']);
+    
+    if (sourceNode && targetNode) {
+      const value = Number(row['Share to Downstream Table Count']) || 0;
+      if (value > 0) {
+        links.push({
+          source: sourceNode.id,
+          target: targetNode.id,
+          value: value
+        });
+      }
+    }
+  });
+
   // 创建连接
   data.forEach((row, index) => {
-    const sourceNode = Array.from(sourceNodes.values()).find(node => node.name === row['Source system']);
+    const sourceNode = Array.from(sourceNodes.values()).find(node => node.sysCode === row['SYS_CODE'] && node.subSysCode === row['SUB_SYS_CODE']);
     const targetNode = Array.from(targetNodes.values()).find(node => node.name === row['Downstream Application Name']);
     
     if (sourceNode && targetNode) {
@@ -173,62 +210,101 @@ const transformDetailData = (dataFlowData) => {
     const nodes = [];
     const links = [];
     
+    // 首先按SYS_CODE和SUB_SYS_CODE组合分组收集源系统数据
+    const sourceGroups = new Map();
+    relatedRows.forEach(row => {
+      const sysCode = row['SYS_CODE'] || '';
+      const subSysCode = row['SUB_SYS_CODE'] || '';
+      const key = `${sysCode}:${subSysCode}`;
+      
+      if (!sourceGroups.has(key)) {
+        sourceGroups.set(key, {
+          sysCode,
+          subSysCode,
+          eimIds: new Set(),
+          applicationNames: new Set(),
+          totalTables: 0,
+          sourceFileTables: 0
+        });
+      }
+      
+      const group = sourceGroups.get(key);
+      if (row['Source EIM ID']) {
+        group.eimIds.add(row['Source EIM ID']);
+      }
+      if (row['Source Application Name']) {
+        group.applicationNames.add(row['Source Application Name']);
+      }
+      group.totalTables += Number(row['Share to Downstream Table Count']) || 0;
+      group.sourceFileTables += Number(row['Source File/Table Count']) || 0;
+    });
+
     // 计算此下游系统的总 Share to Downstream Table Count
     const totalShareCount = relatedRows.reduce((sum, row) => 
       sum + (Number(row['Share to Downstream Table Count']) || 0), 0);
 
-    // 添加源系统节点
-    const sourceNodes = new Set(relatedRows.map(row => row['Source system']));
-    sourceNodes.forEach(sourceName => {
-      if (sourceName) {
-        const sourceData = relatedRows.find(row => row['Source system'] === sourceName);
-        const sourceValue = Number(sourceData['Source File/Table Count']) || 1000;
-        nodes.push({
-          name: sourceName,  // 显示 Source system
-          value: sourceValue,
-          sourceSystem: true,  // 标记为源系统节点
-          applicationName: sourceData['Source Application Name'],  // 用于悬停显示
-          eimId: sourceData['Source EIM ID'],  // 用于悬停显示
-          itemStyle: {
-            color: '#722ed1'
-          }
-        });
+    // 创建源系统节点
+    Array.from(sourceGroups.entries()).forEach(([key, group], index) => {
+      // 获取去重后的EIM IDs数组，如果为空则使用['None']
+      const eimIdsArray = Array.from(group.eimIds);
+      const eimId = eimIdsArray.length > 0 ? eimIdsArray[0] : 'None';
+      
+      // 获取应用名称数组的第一个值
+      const applicationNames = Array.from(group.applicationNames);
+      const applicationName = applicationNames.length > 0 ? applicationNames[0] : 'Unknown';
 
-        // 添加源系统到 CDP 的连接
-        links.push({
-          source: sourceName,
-          target: 'CDP',
-          value: Number(sourceData['Total CDP Table Count(Include Daliy/Monthly Table)']) || 100
-        });
-      }
+      nodes.push({
+        name: applicationName,
+        value: group.sourceFileTables,
+        type: 'source',
+        eimId: eimId,
+        sysCode: group.sysCode,
+        subSysCode: group.subSysCode,
+        x: 300,
+        y: index * 100 + 100
+      });
+
+      // 创建到CDP的连接
+      links.push({
+        source: applicationName,
+        target: 'CDP',
+        value: group.totalTables
+      });
     });
-    
-    // 添加 CDP 节点
+
+    // 添加CDP中间节点
     nodes.push({
       name: 'CDP',
       value: totalShareCount,
-      itemStyle: {
-        color: '#1890ff'
-      }
+      type: 'cdp',
+      x: 600,
+      y: 300
     });
-    
+
     // 添加下游系统节点
-    nodes.push({
-      name: downstreamSystem,  // Downstream Application Name
-      value: totalShareCount,
-      eimId: relatedRows[0]['Downstream EIM ID'],  // 直接显示
-      itemStyle: {
-        color: '#13c2c2'
+    const targetNodes = new Set(relatedRows.map(row => row['Downstream Application Name']));
+    targetNodes.forEach(targetName => {
+      if (targetName) {
+        const targetData = relatedRows.find(row => row['Downstream Application Name'] === targetName);
+        const targetValue = Number(targetData['Share to Downstream Table Count']) || 0;
+        nodes.push({
+          name: targetName,
+          value: targetValue,
+          type: 'downstream',
+          eimId: targetData['Downstream EIM ID'] || '',
+          x: 900,
+          y: nodes.length * 100
+        });
+
+        // 创建CDP到下游系统的连接
+        links.push({
+          source: 'CDP',
+          target: targetName,
+          value: targetValue
+        });
       }
     });
-    
-    // 添加 CDP 到下游系统的连接
-    links.push({
-      source: 'CDP',
-      target: downstreamSystem,
-      value: totalShareCount
-    });
-    
+
     detailData[downstreamSystem] = { nodes, links };
   });
 
