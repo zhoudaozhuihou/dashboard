@@ -1,4 +1,4 @@
-SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,c,Total CDP Table Count,Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
+SYS_CODE,SUB_SYS_CODE,Source system,Source EIM ID,Source Application Name,Source File/Table Count,Total CDP Table Count,Share to Downstream Table Count,Downstream EIM ID,Downstream Application Name,GB/GF
 AAR,AAR01,AAR System,11092884,Wealth Dashboard China ALI CN,150,180,120,11233211,Customer Data Platform,"WPB,WSB"
 AAR,AAR02,AAR System,11092885,Investment Portfolio Analytics,180,220,150,11233212,Investment Analytics Platform,WPB
 AAR,AAR03,AAR System,11092886,Risk Assessment Module,200,240,160,11233213,Risk Management Platform,"WPB,WSB"

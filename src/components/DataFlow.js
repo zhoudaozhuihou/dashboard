@@ -89,14 +89,80 @@ const DataFlow = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [selectedGbGf, setSelectedGbGf] = useState('all');
+  const [selectedGbGf, setSelectedGbGf] = useState('ALL');
+  const [selectedEimId, setSelectedEimId] = useState('ALL');  
+  const [selectedAppName, setSelectedAppName] = useState('ALL');  
   const [viewType, setViewType] = useState('main');
   const [selectedNode, setSelectedNode] = useState(null);
   const [subGraphData, setSubGraphData] = useState(null);
   const chartRef = useRef(null);
 
   const dataFlowData = useSelector((state) => state.dashboard.dataFlowData);
-  
+
+  const eimIdOptions = useMemo(() => {
+    if (!dataFlowData?.rawData) {
+      return ['ALL'];
+    }
+
+    const eimIdSet = new Set();
+    eimIdSet.add('ALL');
+
+    dataFlowData.rawData.forEach(row => {
+      const sourceEimId = row['Source EIM ID'];
+      const downstreamEimId = row['Downstream EIM ID'];
+      
+      if (sourceEimId) {
+        eimIdSet.add(sourceEimId.trim());
+      }
+      if (downstreamEimId) {
+        eimIdSet.add(downstreamEimId.trim());
+      }
+    });
+
+    return Array.from(eimIdSet).sort();
+  }, [dataFlowData]);
+
+  const appNameOptions = useMemo(() => {
+    if (!dataFlowData?.rawData) {
+      return ['ALL'];
+    }
+
+    const appNameSet = new Set();
+    appNameSet.add('ALL');
+
+    dataFlowData.rawData.forEach(row => {
+      const sourceAppName = row['Source Application Name'];
+      const downstreamAppName = row['Downstream Application Name'];
+      
+      if (sourceAppName) {
+        appNameSet.add(sourceAppName.trim());
+      }
+      if (downstreamAppName) {
+        appNameSet.add(downstreamAppName.trim());
+      }
+    });
+
+    return Array.from(appNameSet).sort();
+  }, [dataFlowData]);
+
+  const handleEimIdChange = useCallback((event) => {
+    setSelectedEimId(event.target.value);
+    if (viewType === 'detail') {
+      setViewType('main');
+      setSelectedNode(null);
+      setSubGraphData(null);
+    }
+  }, [viewType]);
+
+  const handleAppNameChange = useCallback((event) => {
+    setSelectedAppName(event.target.value);
+    if (viewType === 'detail') {
+      setViewType('main');
+      setSelectedNode(null);
+      setSubGraphData(null);
+    }
+  }, [viewType]);
+
   const processedData = useMemo(() => {
     if (!dataFlowData?.rawData) {
       console.log('No raw data available');
@@ -106,20 +172,20 @@ const DataFlow = () => {
     console.log('Processing data:', dataFlowData.rawData);
     const nodes = [];
     const links = [];
-    const sourceSystemMap = new Map(); // 按Source system聚合
-    const downstreamAppMap = new Map(); // 按Downstream Application Name聚合
+    const sourceSystemMap = new Map();
+    const downstreamAppMap = new Map();
 
     // 设置布局参数
     const containerWidth = 1600;
     const containerHeight = 900;
-    const margin = 50;
-    const cdpWidth = 200;
-    const leftWidth = (containerWidth - cdpWidth - margin * 4) / 2;
-    const rightWidth = leftWidth;
-    const height = containerHeight - margin * 2;
+    const margin = 40;
     const leftX = margin;
-    const rightX = containerWidth - rightWidth - margin;
-    const centerY = containerHeight / 2;
+    const rightX = containerWidth - margin;
+    const centerX = containerWidth / 2;
+    const height = containerHeight - 2 * margin;
+    const leftWidth = centerX - leftX - 50;  // 减小左侧宽度
+    const rightWidth = rightX - centerX - 150;  // 增加右侧空间
+    const cdpX = centerX + 200;  // CDP节点向右偏移
 
     // 计算节点的交错布局位置
     const getStaggeredPosition = (index, total, baseX, width, margin, height, padding = 30) => {
@@ -151,31 +217,38 @@ const DataFlow = () => {
 
     // 首先计算每个系统的总表数
     dataFlowData.rawData.forEach(row => {
-      // 安全地获取字段值，提供默认值
       const sourceSystem = row['Source system'] || 'Unknown';
       const sourceId = row['Source EIM ID'] || 'Unknown';
       const sourceAppName = row['Source Application Name'] || 'Unknown';
       const sysCode = row['SYS_CODE'] || 'N/A';
       const subSysCode = row['SUB_SYS_CODE'] || 'N/A';
-      
-      // 使用正确的列名'c'来获取Source File/Table Count
-      const sourceTableCount = safeParseInt(row['c']);
-      const cdpTableCount = safeParseInt(row['Total CDP Table Count']);
-      const sharedTableCount = safeParseInt(row['Share to Downstream Table Count']);
-      
       const downstreamName = row['Downstream Application Name'] || 'Unknown';
       const downstreamId = row['Downstream EIM ID'] || 'Unknown';
       const gbgf = row['GB/GF'] || '';
 
-      // 处理 GB/GF 字段，移除双引号并正确分割多个值
-      if (selectedGbGf !== 'all' && gbgf) {
+      if (selectedGbGf !== 'ALL' && gbgf) {
         const gbgfValues = gbgf.replace(/"/g, '').split(',').map(g => g.trim());
         if (!gbgfValues.includes(selectedGbGf)) {
           return;
         }
       }
 
-      // 更新或创建源系统记录（按Source system聚合）
+      if (selectedEimId !== 'ALL') {
+        if (sourceId !== selectedEimId && downstreamId !== selectedEimId) {
+          return;
+        }
+      }
+
+      if (selectedAppName !== 'ALL') {
+        if (sourceAppName !== selectedAppName && downstreamName !== selectedAppName) {
+          return;
+        }
+      }
+
+      const sourceTableCount = safeParseInt(row['c']) || 0;
+      const cdpTableCount = safeParseInt(row['Total CDP Table Count']) || 0;
+      const sharedTableCount = safeParseInt(row['Share to Downstream Table Count']) || 0;
+
       let sourceSystemNode = sourceSystemMap.get(sourceSystem);
       if (!sourceSystemNode) {
         sourceSystemNode = {
@@ -190,11 +263,9 @@ const DataFlow = () => {
         sourceSystemMap.set(sourceSystem, sourceSystemNode);
       }
       
-      // 直接使用sourceTableCount更新tables字段
       sourceSystemNode.tables += sourceTableCount;
       sourceSystemNode.cdpTables += cdpTableCount;
 
-      // 存储源系统详细信息
       if (!sourceSystemNode.details.has(sourceId)) {
         sourceSystemNode.details.set(sourceId, {
           id: sourceId,
@@ -212,26 +283,25 @@ const DataFlow = () => {
         detail.cdpTables += cdpTableCount;
       }
 
-      // 更新或创建下游系统记录（按Downstream Application Name聚合）
       let downstreamApp = downstreamAppMap.get(downstreamName);
       if (!downstreamApp) {
         downstreamApp = {
-          id: downstreamName,  // 使用application name作为ID
+          id: downstreamName,  
           name: downstreamName,
           tables: 0,
           type: 'downstream',
           details: new Map(),
-          eimIds: new Set()  // 用于存储关联的EIM IDs
+          eimId: downstreamId  // 修改为单个eimId而不是Set
         };
         downstreamAppMap.set(downstreamName, downstreamApp);
+      } else if (downstreamId !== downstreamApp.eimId) {
+        // 如果发现同一个Application Name有不同的EIM ID，使用警告提示
+        console.warn(`Multiple EIM IDs found for ${downstreamName}: ${downstreamApp.eimId}, ${downstreamId}`);
       }
       
-      // 累加表数量并记录EIM ID
       downstreamApp.tables += sharedTableCount;
-      downstreamApp.eimIds.add(downstreamId);
 
-      // 存储下游系统详细信息
-      const detailKey = `${sourceId}_${downstreamId}`;  // 使用复合键确保唯一性
+      const detailKey = `${sourceId}_${downstreamId}`;  
       if (!downstreamApp.details.has(detailKey)) {
         downstreamApp.details.set(detailKey, {
           sourceId: sourceId,
@@ -248,9 +318,6 @@ const DataFlow = () => {
       }
     });
 
-    console.log('Source Systems:', Array.from(sourceSystemMap.values()));  
-
-    // 对源系统和下游系统按表数量排序
     const sortedSourceSystems = Array.from(sourceSystemMap.values())
       .sort((a, b) => b.tables - a.tables);  
     
@@ -258,7 +325,6 @@ const DataFlow = () => {
       .filter(app => app.tables > 0)  
       .sort((a, b) => b.tables - a.tables);
 
-    // 取前30个源系统，其余合并为"Other Sources"
     const topSourceSystems = sortedSourceSystems.slice(0, 30);
     const otherSourceSystems = sortedSourceSystems.slice(30);
     
@@ -274,11 +340,9 @@ const DataFlow = () => {
       });
     }
 
-    // 计算最大值用于节点大小和连线宽度的缩放（确保不会出现0）
     const maxSourceTables = Math.max(1, ...topSourceSystems.map(sys => sys.tables || 0));
     const maxDownstreamTables = Math.max(1, ...sortedDownstreamApps.map(sys => sys.tables || 0));
 
-    // 添加源系统节点
     topSourceSystems.forEach((node, index) => {
       const pos = getStaggeredPosition(index, topSourceSystems.length, leftX, leftWidth, margin, height);
       const nodeData = {
@@ -404,7 +468,6 @@ const DataFlow = () => {
         }
       };
 
-      // 将Map对象转换为普通对象
       if (nodeData.details instanceof Map) {
         const detailsObj = {};
         nodeData.details.forEach((value, key) => {
@@ -415,7 +478,6 @@ const DataFlow = () => {
 
       nodes.push(nodeData);
 
-      // 只为有表的节点添加连线
       if (node.tables > 0) {
         links.push({
           source: node.id,
@@ -432,41 +494,47 @@ const DataFlow = () => {
       }
     });
 
-    // 添加 CDP 节点
-    nodes.push({
+    const cdpNode = {
       id: 'CDP',
       name: 'CDP',
-      itemStyle: { color: '#1890ff' },
-      x: containerWidth / 2,
-      y: centerY,
+      type: 'cdp',
+      value: 0,
+      symbolSize: 120,
+      x: cdpX,  
+      y: containerHeight / 2,
+      fixed: true,
       symbol: 'circle',
-      symbolSize: 60,
-      category: 'cdp',
+      itemStyle: {
+        color: '#1890ff'
+      },
       label: {
         show: true,
         position: 'inside',
         formatter: 'CDP',
-        fontSize: 14,
+        fontSize: 16,
         color: '#fff'
       }
-    });
+    };
+    nodes.push(cdpNode);
 
-    // 添加下游系统节点（不包含Other节点）
     sortedDownstreamApps.forEach((node, index) => {
-      // 只处理有表的节点
       if (!node.tables || node.tables <= 0) {
         return;
       }
 
-      const pos = getStaggeredPosition(index, sortedDownstreamApps.length, rightX, rightWidth, margin, height);
+      const pos = getStaggeredPosition(index, sortedDownstreamApps.length, cdpX + 150, rightWidth, margin, height);
       const nodeData = {
-        ...node,
+        id: node.id,
+        name: node.name,
+        value: node.tables,
         x: pos.x,
         y: pos.y,
-        symbol: 'circle',
         symbolSize: Math.max(15, Math.sqrt(node.tables / maxDownstreamTables) * 35),
+        symbol: 'circle',
         category: 'downstream',
         itemStyle: { color: '#E6A23C' },
+        details: node.details,
+        eimId: node.eimId,  // 使用单个eimId
         label: {
           show: true,
           position: 'right',
@@ -532,24 +600,21 @@ const DataFlow = () => {
               return tooltip.join('');
             }
 
-            // 获取详细信息
             const details = data.details ? Object.values(data.details) : [];
             const eimIds = Array.from(data.eimIds || []);
             
             let tooltip = [
-              '<div style="font-weight: bold; margin-bottom: 10px;">Downstream System Details</div>',
+              '<div style="font-weight: bold; margin-bottom: 10px;">',
+              data.name,
+              '</div>',
               '<table style="width:100%; border-collapse: collapse;">',
               '<tr>',
-              '<td style="padding: 4px 8px;">Application:</td>',
-              `<td style="padding: 4px 8px;">${data.name || 'Unknown'}</td>`,
-              '</tr>',
-              '<tr>',
               '<td style="padding: 4px 8px;">Total Tables:</td>',
-              `<td style="padding: 4px 8px;">${(data.tables || 0).toLocaleString()}</td>`,
+              `<td style="padding: 4px 8px;">${(data.value || 0).toLocaleString()}</td>`,
               '</tr>',
               '<tr>',
-              '<td style="padding: 4px 8px;">EIM IDs:</td>',
-              `<td style="padding: 4px 8px;">${eimIds.join(', ')}</td>`,
+              '<td style="padding: 4px 8px;">EIM ID:</td>',
+              `<td style="padding: 4px 8px;">${data.eimId || 'N/A'}</td>`,
               '</tr>',
               '</table>'
             ];
@@ -584,7 +649,6 @@ const DataFlow = () => {
         }
       };
 
-      // 将Map对象转换为普通对象
       if (nodeData.details instanceof Map) {
         const detailsObj = {};
         nodeData.details.forEach((value, key) => {
@@ -595,7 +659,6 @@ const DataFlow = () => {
 
       nodes.push(nodeData);
 
-      // 只为有表的节点添加连线
       if (node.tables > 0) {
         links.push({
           source: 'CDP',
@@ -623,13 +686,35 @@ const DataFlow = () => {
       sourceSystemMap,
       downstreamAppMap
     };
-  }, [dataFlowData, selectedGbGf]);
+  }, [dataFlowData, selectedGbGf, selectedEimId, selectedAppName]);
+
+  const gbgfOptions = useMemo(() => {
+    if (!dataFlowData?.rawData) {
+      return ['ALL'];
+    }
+
+    const gbgfSet = new Set();
+    gbgfSet.add('ALL');  
+
+    dataFlowData.rawData.forEach(row => {
+      if (row['GB/GF']) {
+        const gbgfValues = row['GB/GF'].split(',').map(value => value.trim());
+        gbgfValues.forEach(value => {
+          if (value) {
+            gbgfSet.add(value);
+          }
+        });
+      }
+    });
+
+    return Array.from(gbgfSet).sort();
+  }, [dataFlowData]);
 
   const handleNodeClick = useCallback((params) => {
     if (params.data.category === 'downstream') {
       const downstreamName = params.data.name;
       if (downstreamName === 'Other Downstream Systems') {
-        return; // 不处理其他下游系统的点击
+        return; 
       }
 
       const downstreamApp = processedData.downstreamAppMap.get(downstreamName);
@@ -641,18 +726,16 @@ const DataFlow = () => {
       const nodes = [];
       const links = [];
       
-      // 获取与该下游系统相关的所有源系统详细信息
       const sourceDetails = Array.from(downstreamApp.details.values())
-        .sort((a, b) => b.sharedTables - a.sharedTables);
+        .sort((a, b) => (b.tables || 0) - (a.tables || 0));  
 
-      // 取前30个源系统，其余合并为"Other Sources"
       const topSources = sourceDetails.slice(0, 30);
       const otherSources = sourceDetails.slice(30);
 
-      // 添加源系统节点
       topSources.forEach(source => {
         nodes.push({
           name: source.sourceSystem,
+          value: source.tables || 0,  
           itemStyle: { color: '#67C23A' },
           tooltip: {
             formatter: () => {
@@ -680,6 +763,10 @@ const DataFlow = () => {
                 `<td style="padding: 4px 8px;">${source.subSysCode || 'N/A'}</td>`,
                 '</tr>',
                 '<tr>',
+                '<td style="padding: 4px 8px;">Total Tables:</td>',
+                `<td style="padding: 4px 8px;">${(source.tables || 0).toLocaleString()}</td>`,
+                '</tr>',
+                '<tr>',
                 '<td style="padding: 4px 8px;">Shared Tables:</td>',
                 `<td style="padding: 4px 8px;">${source.sharedTables.toLocaleString()}</td>`,
                 '</tr>',
@@ -689,20 +776,20 @@ const DataFlow = () => {
           }
         });
 
-        // 源系统到 CDP 的链接
         links.push({
           source: source.sourceSystem,
           target: 'CDP',
-          value: source.sharedTables
+          value: source.sharedTables  
         });
       });
 
-      // 如果有其他源系统，添加 Other Sources 节点
       if (otherSources.length > 0) {
-        const otherSourceTables = otherSources.reduce((sum, sys) => sum + sys.sharedTables, 0);
+        const otherSourceTotalTables = otherSources.reduce((sum, sys) => sum + (sys.tables || 0), 0);  
+        const otherSourceSharedTables = otherSources.reduce((sum, sys) => sum + sys.sharedTables, 0);
 
         nodes.push({
           name: 'Other Sources',
+          value: otherSourceTotalTables,  
           itemStyle: { color: '#67C23A' },
           tooltip: {
             formatter: () => {
@@ -714,8 +801,12 @@ const DataFlow = () => {
                 `<td style="padding: 4px 8px;">${otherSources.length}</td>`,
                 '</tr>',
                 '<tr>',
-                '<td style="padding: 4px 8px;">Total Shared Tables:</td>',
-                `<td style="padding: 4px 8px;">${otherSourceTables.toLocaleString()}</td>`,
+                '<td style="padding: 4px 8px;">Total Tables:</td>',
+                `<td style="padding: 4px 8px;">${otherSourceTotalTables.toLocaleString()}</td>`,
+                '</tr>',
+                '<tr>',
+                '<td style="padding: 4px 8px;">Shared Tables:</td>',
+                `<td style="padding: 4px 8px;">${otherSourceSharedTables.toLocaleString()}</td>`,
                 '</tr>',
                 '</table>',
                 '<div style="margin-top: 10px; font-weight: bold;">Included Systems:</div>'
@@ -733,6 +824,10 @@ const DataFlow = () => {
                   `<td style="padding: 4px 8px;">${sys.sourceName || 'Unknown'}</td>`,
                   '</tr>',
                   '<tr>',
+                  '<td style="padding: 4px 8px;">Total Tables:</td>',
+                  `<td style="padding: 4px 8px;">${(sys.tables || 0).toLocaleString()}</td>`,
+                  '</tr>',
+                  '<tr>',
                   '<td style="padding: 4px 8px;">Shared Tables:</td>',
                   `<td style="padding: 4px 8px;">${sys.sharedTables.toLocaleString()}</td>`,
                   '</tr>',
@@ -745,55 +840,35 @@ const DataFlow = () => {
           }
         });
 
-        // Other Sources 的链接
         links.push({
           source: 'Other Sources',
           target: 'CDP',
-          value: otherSourceTables
+          value: otherSourceSharedTables  
         });
       }
 
-      // 添加 CDP 节点
       nodes.push({
         name: 'CDP',
-        itemStyle: { color: '#1890ff' }
-      });
-
-      // 添加下游系统节点
-      nodes.push({
-        name: params.data.name,
-        itemStyle: { color: '#E6A23C' },
-        tooltip: {
-          formatter: () => {
-            return [
-              '<div style="font-weight: bold; margin-bottom: 10px;">Downstream System Details</div>',
-              '<table style="width:100%; border-collapse: collapse;">',
-              '<tr>',
-              '<td style="padding: 4px 8px;">Application:</td>',
-              `<td style="padding: 4px 8px;">${downstreamApp.name || 'Unknown'}</td>`,
-              '</tr>',
-              '<tr>',
-              '<td style="padding: 4px 8px;">Total Tables:</td>',
-              `<td style="padding: 4px 8px;">${downstreamApp.tables.toLocaleString()}</td>`,
-              '</tr>',
-              '<tr>',
-              '<td style="padding: 4px 8px;">EIM IDs:</td>',
-              `<td style="padding: 4px 8px;">${Array.from(downstreamApp.eimIds).join(', ')}</td>`,
-              '</tr>',
-              '</table>'
-            ].join('');
-          }
+        itemStyle: { color: '#1890ff' },
+        value: downstreamApp.tables * 2,  
+        itemStyle: {
+          borderWidth: 1,
+          borderColor: '#aaa'
         }
       });
 
-      // 添加从 CDP 到下游系统的链接
+      nodes.push({
+        name: params.data.name,
+        itemStyle: { color: '#E6A23C' },
+        value: downstreamApp.tables,  
+      });
+
       links.push({
         source: 'CDP',
         target: params.data.name,
         value: downstreamApp.tables
       });
 
-      // 创建子图数据
       const subGraphData = {
         tooltip: {
           trigger: 'item',
@@ -804,11 +879,18 @@ const DataFlow = () => {
           emphasis: {
             focus: 'adjacency'
           },
-          nodeWidth: 20,
-          nodeGap: 12,
+          nodeWidth: 40,  
+          nodeGap: 30,    
           layoutIterations: 32,
           data: nodes,
           links: links,
+          label: {
+            position: 'inside'  
+          },
+          itemStyle: {
+            borderWidth: 1,
+            borderColor: '#aaa'
+          },
           lineStyle: {
             color: 'source',
             opacity: 0.6,
@@ -915,9 +997,14 @@ const DataFlow = () => {
     }
   }, [processedData, getOption]);
 
-  const handleGbGfChange = (event) => {
+  const handleGbGfChange = useCallback((event) => {
     setSelectedGbGf(event.target.value);
-  };
+    if (viewType === 'detail') {
+      setViewType('main');
+      setSelectedNode(null);
+      setSubGraphData(null);
+    }
+  }, [viewType]);
 
   const handleFullscreenToggle = () => {
     setIsFullscreen(!isFullscreen);
@@ -928,24 +1015,59 @@ const DataFlow = () => {
       <div className={classes.header}>
         <div className={classes.titleSection}>
           {viewType === 'detail' && (
-            <IconButton className={classes.backButton} onClick={handleBack}>
+            <IconButton
+              className={classes.backButton}
+              onClick={handleBack}
+              size="small"
+            >
               <ArrowBackIcon />
             </IconButton>
           )}
-          <Typography variant="h6" className={classes.title}>
-            {viewType === 'detail' ? `${selectedNode?.name} Data Flow` : 'Data Flow'}
+          <Typography variant="h5" className={classes.title}>
+            Data Flow Dashboard
+          </Typography>
+          <Typography className={classes.subtitle}>
+            Visualizing data flow between systems
           </Typography>
         </div>
-        <div className={classes.controls}>
+        <div className={classes.filterSection}>
           <FormControl className={classes.formControl}>
             <InputLabel>GB/GF</InputLabel>
             <Select
               value={selectedGbGf}
               onChange={handleGbGfChange}
             >
-              <MenuItem value="all">All</MenuItem>
-              <MenuItem value="WPB">WPB</MenuItem>
-              <MenuItem value="WSB">WSB</MenuItem>
+              {gbgfOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl className={classes.formControl}>
+            <InputLabel>EIM ID</InputLabel>
+            <Select
+              value={selectedEimId}
+              onChange={handleEimIdChange}
+            >
+              {eimIdOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl className={classes.formControl}>
+            <InputLabel>Application Name</InputLabel>
+            <Select
+              value={selectedAppName}
+              onChange={handleAppNameChange}
+            >
+              {appNameOptions.map(option => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </div>

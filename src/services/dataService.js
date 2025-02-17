@@ -65,39 +65,27 @@ const transformMainGraph = (data) => {
       sourceGroups.set(key, {
         sysCode,
         subSysCode,
-        eimIds: new Set(),
-        applicationNames: new Set(),
-        totalTables: 0
+        eimId: row['Source EIM ID'] || 'None',  
+        applicationName: row['Source Application Name'] || 'Unknown',  
+        sourceFileTables: 0,
+        shareTables: 0
       });
     }
     
     const group = sourceGroups.get(key);
-    if (row['Source EIM ID']) {
-      group.eimIds.add(row['Source EIM ID']);
-    }
-    if (row['Source Application Name']) {
-      group.applicationNames.add(row['Source Application Name']);
-    }
-    group.totalTables += Number(row['Share to Downstream Table Count']) || 0;
+    group.sourceFileTables += Number(row['Source File/Table Count']) || 0;
+    group.shareTables += Number(row['Share to Downstream Table Count']) || 0;
   });
 
   // 创建源系统节点
   Array.from(sourceGroups.entries()).forEach(([key, group], index) => {
-    // 获取去重后的EIM IDs数组，如果为空则使用['None']
-    const eimIdsArray = Array.from(group.eimIds);
-    const eimId = eimIdsArray.length > 0 ? eimIdsArray[0] : 'None';
-    
-    // 获取应用名称数组的第一个值
-    const applicationNames = Array.from(group.applicationNames);
-    const applicationName = applicationNames.length > 0 ? applicationNames[0] : 'Unknown';
-
     sourceNodes.set(key, {
       id: `source_${index}`,
-      name: applicationName,
+      name: group.applicationName,
       type: 'source',
-      value: group.totalTables,
-      symbolSize: Math.max(30, Math.min(70, Math.sqrt(group.totalTables) * 2)),
-      eimId: eimId,
+      value: group.sourceFileTables,  
+      symbolSize: Math.max(30, Math.min(70, Math.sqrt(group.sourceFileTables) * 2)),
+      eimId: group.eimId,
       sysCode: group.sysCode,
       subSysCode: group.subSysCode,
       x: 300,
@@ -147,7 +135,7 @@ const transformMainGraph = (data) => {
         links.push({
           source: sourceNode.id,
           target: targetNode.id,
-          value: value
+          value: value  
         });
       }
     }
