@@ -1,8 +1,29 @@
 import * as XLSX from 'xlsx';
 
-// 用于解析 CSV 数据
+/**
+ * CSV 文件处理注意事项：
+ * 1. 文件编码：确保 CSV 文件使用 UTF-8 编码，避免中文乱码
+ * 2. 分隔符：默认使用逗号分隔，如果数据中包含逗号，需要用引号包裹
+ * 3. 列名要求：
+ *    - 必须包含以下列：
+ *      * Source GB/GF：源系统的 GB/GF，多个值用逗号分隔
+ *      * Downstream GB/GF：下游系统的 GB/GF，多个值用逗号分隔
+ *      * Total CDP Table Count：用于计算流量权重
+ *    - 列名大小写敏感，必须完全匹配
+ * 4. 数据格式：
+ *    - GB/GF 值中不能包含逗号，如有多个值应该用引号包裹
+ *    - 数字列（如 Table Count）必须是有效的数字
+ */
+
+/**
+ * 解析 CSV 文本内容
+ * @param {string} csvText - CSV 文件的文本内容
+ * @returns {Array<Object>} 解析后的数据数组
+ */
 const parseCSV = (csvText) => {
-  const lines = csvText.split('\n');
+  // 按行分割，处理不同操作系统的换行符
+  const lines = csvText.split(/\r\n|\n|\r/);
+  // 获取并处理表头，移除空格
   const headers = lines[0].split(',').map(header => header.trim());
   
   return lines.slice(1).map(line => {
@@ -11,6 +32,7 @@ const parseCSV = (csvText) => {
     let currentValue = '';
     let insideQuotes = false;
     
+    // 字符级别的解析，确保正确处理引号内的逗号
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       if (char === '"') {
@@ -27,6 +49,7 @@ const parseCSV = (csvText) => {
     // 移除值中的引号
     const cleanValues = values.map(value => value.replace(/^"(.*)"$/, '$1').trim());
     
+    // 将值与表头对应，创建对象
     return headers.reduce((obj, header, index) => {
       obj[header] = cleanValues[index];
       return obj;
@@ -323,12 +346,24 @@ export const transformData = (data) => {
   return transformedData;
 };
 
+/**
+ * 加载仪表板数据
+ * 注意事项：
+ * 1. 文件路径：确保 CSV 文件位于正确的目录（public/data/）
+ * 2. 错误处理：
+ *    - 文件不存在
+ *    - 解析错误
+ *    - 数据格式错误
+ * 3. 数据验证：
+ *    - 检查必需的列是否存在
+ *    - 验证数据格式是否正确
+ */
 export const loadDashboardData = async () => {
   try {
     console.log('Loading dashboard data...');
     
     // 读取 CSV 文件
-    const response = await fetch('/data/CDP-Dashboard-Data.csv');
+    const response = await fetch('./data/CDP-Dashboard-Data.csv');
     if (!response.ok) {
       throw new Error(`Failed to fetch CSV file: ${response.status} ${response.statusText}`);
     }
@@ -336,12 +371,30 @@ export const loadDashboardData = async () => {
     const csvText = await response.text();
     console.log('CSV text loaded:', csvText.substring(0, 200) + '...');
     
+    // 解析 CSV 数据
     const dataFlowData = parseCSV(csvText);
     console.log('Parsed CSV data:', dataFlowData);
 
+    // 数据验证
     if (dataFlowData.length === 0) {
-      console.error('No data found in CSV file!');
       throw new Error('No data found in CSV file');
+    }
+
+    // 验证必需的列
+    const requiredColumns = ['Source GB/GF', 'Downstream GB/GF', 'Total CDP Table Count'];
+    const firstRow = dataFlowData[0];
+    const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+    if (missingColumns.length > 0) {
+      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+    }
+
+    // 验证数据格式
+    const invalidRows = dataFlowData.filter(row => {
+      const tableCount = parseInt(row['Total CDP Table Count']);
+      return isNaN(tableCount) || !row['Source GB/GF'] || !row['Downstream GB/GF'];
+    });
+    if (invalidRows.length > 0) {
+      console.warn(`Found ${invalidRows.length} rows with invalid data format`);
     }
 
     // 转换数据
