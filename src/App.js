@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Link, useLocation, Redirect } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 import { AppBar, Toolbar, Typography, Container, Button, CssBaseline, Grid, Tabs, Tab } from '@material-ui/core';
 import Overview from './components/Overview';
 import DataFlow from './components/DataFlow';
 import SankeyFlow from './components/SankeyFlow';
+import GBGFSankey from './components/GBGFSankey';
+import Usage from './components/Usage';
 import { loadDashboardDataAsync } from './features/dashboard/dashboardSlice';
 
 const useStyles = makeStyles((theme) => ({
@@ -102,15 +104,20 @@ function App() {
             indicatorColor="primary"
             className={classes.tabs}
           >
-            <Tab label="Overview" value="overview" />
-            <Tab label="Data Flow" value="dataflow" />
-            <Tab label="Sankey Flow" value="sankeyflow" />
+            <Tab label="Overview" value="overview" component={Link} to="/usage" />
+            <Tab label="Data Flow" value="dataflow" component={Link} to="/dataflow" />
+            <Tab label="Sankey Flow" value="sankeyflow" component={Link} to="/sankeyflow" />
+            <Tab label="GB/GF Flow" value="gbgfflow" component={Link} to="/gbgfflow" />
           </Tabs>
         </div>
         <Container maxWidth={false} className={classes.content}>
-          {activeTab === 'overview' && <Overview />}
-          {activeTab === 'dataflow' && <DataFlow />}
-          {activeTab === 'sankeyflow' && <SankeyFlow />}
+          <Switch>
+            <Route exact path="/usage" component={Overview} />
+            <Route path="/dataflow" component={DataFlow} />
+            <Route path="/sankeyflow" component={SankeyFlow} />
+            <Route path="/gbgfflow" component={GBGFSankey} />
+            <Route path="/" render={() => <Redirect to="/usage" />} />
+          </Switch>
         </Container>
       </div>
     </Router>

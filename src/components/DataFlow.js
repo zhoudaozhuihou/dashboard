@@ -85,6 +85,42 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+// 列名映射常量
+const COLUMN_MAPPING = {
+  SOURCE_SYSTEM: 'Source system',
+  SOURCE_EIM_ID: 'Source EIM ID',
+  SOURCE_APP_NAME: 'Source Application Name',
+  SYS_CODE: 'SYS_CODE',
+  SUB_SYS_CODE: 'SUB_SYS_CODE',
+  DOWNSTREAM_NAME: 'Downstream Application Name',
+  DOWNSTREAM_EIM_ID: 'Downstream EIM ID',
+  DOWNSTREAM_INFO: 'Down stream info',
+  GBGF: 'GB/GF',
+  SOURCE_TABLE_COUNT: 'Source File/Table Count',
+  CDP_TABLE_COUNT: 'Total CDP Table Count',
+  SHARED_TABLE_COUNT: 'Share to Downstream Table Count'
+};
+
+// 安全的数据获取函数
+const safeGetValue = (row, columnName, defaultValue = '') => {
+  if (!COLUMN_MAPPING[columnName]) {
+    console.warn(`Column ${columnName} not found in mapping`);
+    return defaultValue;
+  }
+  
+  const value = row[COLUMN_MAPPING[columnName]];
+  return value !== undefined && value !== null ? value : defaultValue;
+};
+
+// 添加数值转换函数
+const safeParseInt = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  }
+  const parsed = parseInt(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 const DataFlow = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
@@ -99,73 +135,154 @@ const DataFlow = () => {
 
   const dataFlowData = useSelector((state) => state.dashboard.dataFlowData);
 
-  const eimIdOptions = useMemo(() => {
+  // 获取筛选后的选项
+  const getFilteredOptions = useMemo(() => {
     if (!dataFlowData?.rawData) {
-      return ['ALL'];
+      return {
+        gbgfOptions: ['ALL'],
+        eimIdOptions: ['ALL'],
+        appNameOptions: ['ALL']
+      };
     }
 
-    const eimIdSet = new Set();
-    eimIdSet.add('ALL');
+    const gbgfSet = new Set(['ALL']);
+    const eimIdSet = new Set(['ALL']);
+    const appNameSet = new Set(['ALL']);
 
     dataFlowData.rawData.forEach(row => {
-      const sourceEimId = row['Source EIM ID'];
-      const downstreamEimId = row['Downstream EIM ID'];
-      
-      if (sourceEimId) {
-        eimIdSet.add(sourceEimId.trim());
-      }
-      if (downstreamEimId) {
-        eimIdSet.add(downstreamEimId.trim());
+      const gbgf = safeGetValue(row, 'GBGF');
+      const sourceEimId = safeGetValue(row, 'SOURCE_EIM_ID');
+      const downstreamEimId = safeGetValue(row, 'DOWNSTREAM_EIM_ID');
+      const sourceAppName = safeGetValue(row, 'SOURCE_APP_NAME');
+      const downstreamAppName = safeGetValue(row, 'DOWNSTREAM_NAME');
+
+      // 应用GB/GF筛选
+      if (selectedGbGf === 'ALL' || (gbgf && gbgf.split(',').map(g => g.trim()).includes(selectedGbGf))) {
+        // 应用EIM ID筛选
+        if (selectedEimId === 'ALL' || sourceEimId === selectedEimId || downstreamEimId === selectedEimId) {
+          // 应用Application Name筛选
+          if (selectedAppName === 'ALL' || sourceAppName === selectedAppName || downstreamAppName === selectedAppName) {
+            // 添加GB/GF选项
+            if (gbgf) {
+              gbgf.split(',').forEach(value => {
+                const trimmed = value.trim();
+                if (trimmed) {
+                  gbgfSet.add(trimmed);
+                }
+              });
+            }
+
+            // 添加EIM ID选项
+            if (sourceEimId) {
+              eimIdSet.add(sourceEimId.trim());
+            }
+            if (downstreamEimId) {
+              eimIdSet.add(downstreamEimId.trim());
+            }
+
+            // 添加Application Name选项
+            if (sourceAppName) {
+              appNameSet.add(sourceAppName.trim());
+            }
+            if (downstreamAppName) {
+              appNameSet.add(downstreamAppName.trim());
+            }
+          }
+        }
       }
     });
 
-    return Array.from(eimIdSet).sort();
-  }, [dataFlowData]);
+    return {
+      gbgfOptions: Array.from(gbgfSet).sort(),
+      eimIdOptions: Array.from(eimIdSet).sort(),
+      appNameOptions: Array.from(appNameSet).sort()
+    };
+  }, [dataFlowData, selectedGbGf, selectedEimId, selectedAppName]);
 
-  const appNameOptions = useMemo(() => {
-    if (!dataFlowData?.rawData) {
-      return ['ALL'];
+  // 更新筛选框的选项
+  const { gbgfOptions, eimIdOptions, appNameOptions } = getFilteredOptions;
+
+  const handleGbGfChange = useCallback((event) => {
+    const newValue = event.target.value;
+    setSelectedGbGf(newValue);
+    // 如果当前选中的EIM ID或Application Name不在筛选后的选项中，重置为ALL
+    if (newValue !== 'ALL') {
+      if (!eimIdOptions.includes(selectedEimId)) {
+        setSelectedEimId('ALL');
+      }
+      if (!appNameOptions.includes(selectedAppName)) {
+        setSelectedAppName('ALL');
+      }
     }
-
-    const appNameSet = new Set();
-    appNameSet.add('ALL');
-
-    dataFlowData.rawData.forEach(row => {
-      const sourceAppName = row['Source Application Name'];
-      const downstreamAppName = row['Downstream Application Name'];
-      
-      if (sourceAppName) {
-        appNameSet.add(sourceAppName.trim());
-      }
-      if (downstreamAppName) {
-        appNameSet.add(downstreamAppName.trim());
-      }
-    });
-
-    return Array.from(appNameSet).sort();
-  }, [dataFlowData]);
+    if (viewType === 'detail') {
+      setViewType('main');
+      setSelectedNode(null);
+      setSubGraphData(null);
+    }
+  }, [eimIdOptions, appNameOptions, selectedEimId, selectedAppName, viewType]);
 
   const handleEimIdChange = useCallback((event) => {
-    setSelectedEimId(event.target.value);
+    const newValue = event.target.value;
+    setSelectedEimId(newValue);
+    // 如果当前选中的GB/GF或Application Name不在筛选后的选项中，重置为ALL
+    if (newValue !== 'ALL') {
+      if (!gbgfOptions.includes(selectedGbGf)) {
+        setSelectedGbGf('ALL');
+      }
+      if (!appNameOptions.includes(selectedAppName)) {
+        setSelectedAppName('ALL');
+      }
+    }
     if (viewType === 'detail') {
       setViewType('main');
       setSelectedNode(null);
       setSubGraphData(null);
     }
-  }, [viewType]);
+  }, [gbgfOptions, appNameOptions, selectedGbGf, selectedAppName, viewType]);
 
   const handleAppNameChange = useCallback((event) => {
-    setSelectedAppName(event.target.value);
+    const newValue = event.target.value;
+    setSelectedAppName(newValue);
+    // 如果当前选中的GB/GF或EIM ID不在筛选后的选项中，重置为ALL
+    if (newValue !== 'ALL') {
+      if (!gbgfOptions.includes(selectedGbGf)) {
+        setSelectedGbGf('ALL');
+      }
+      if (!eimIdOptions.includes(selectedEimId)) {
+        setSelectedEimId('ALL');
+      }
+    }
     if (viewType === 'detail') {
       setViewType('main');
       setSelectedNode(null);
       setSubGraphData(null);
     }
-  }, [viewType]);
+  }, [gbgfOptions, eimIdOptions, selectedGbGf, selectedEimId, viewType]);
 
   const processedData = useMemo(() => {
     if (!dataFlowData?.rawData) {
       console.log('No raw data available');
+      return null;
+    }
+
+    // 验证数据结构
+    if (!Array.isArray(dataFlowData.rawData) || dataFlowData.rawData.length === 0) {
+      console.error('Invalid data structure');
+      return null;
+    }
+
+    // 验证必要的列是否存在
+    const firstRow = dataFlowData.rawData[0];
+    const requiredColumns = [
+      COLUMN_MAPPING.SOURCE_SYSTEM,
+      COLUMN_MAPPING.DOWNSTREAM_NAME,
+      COLUMN_MAPPING.SOURCE_TABLE_COUNT,
+      COLUMN_MAPPING.SHARED_TABLE_COUNT
+    ];
+
+    const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+    if (missingColumns.length > 0) {
+      console.error('Missing required columns:', missingColumns);
       return null;
     }
 
@@ -183,9 +300,9 @@ const DataFlow = () => {
     const rightX = containerWidth - margin;
     const centerX = containerWidth / 2;
     const height = containerHeight - 2 * margin;
-    const leftWidth = centerX - leftX - 50;  // 减小左侧宽度
-    const rightWidth = rightX - centerX - 150;  // 增加右侧空间
-    const cdpX = centerX + 200;  // CDP节点向右偏移
+    const leftWidth = centerX - leftX - 50;  
+    const rightWidth = rightX - centerX - 150;  
+    const cdpX = centerX + 200;  
 
     // 计算节点的交错布局位置
     const getStaggeredPosition = (index, total, baseX, width, margin, height, padding = 30) => {
@@ -206,26 +323,19 @@ const DataFlow = () => {
       };
     };
 
-    // 添加数值转换函数
-    const safeParseInt = (value) => {
-      if (value === null || value === undefined || value === '') {
-        return 0;
-      }
-      const parsed = parseInt(value);
-      return isNaN(parsed) ? 0 : parsed;
-    };
-
-    // 首先计算每个系统的总表数
+    // 处理数据
     dataFlowData.rawData.forEach(row => {
-      const sourceSystem = row['Source system'] || 'Unknown';
-      const sourceId = row['Source EIM ID'] || 'Unknown';
-      const sourceAppName = row['Source Application Name'] || 'Unknown';
-      const sysCode = row['SYS_CODE'] || 'N/A';
-      const subSysCode = row['SUB_SYS_CODE'] || 'N/A';
-      const downstreamName = row['Downstream Application Name'] || 'Unknown';
-      const downstreamId = row['Downstream EIM ID'] || 'Unknown';
-      const gbgf = row['GB/GF'] || '';
+      const sourceSystem = safeGetValue(row, 'SOURCE_SYSTEM', 'Unknown');
+      const sourceId = safeGetValue(row, 'SOURCE_EIM_ID', 'Unknown');
+      const sourceAppName = safeGetValue(row, 'SOURCE_APP_NAME', 'Unknown');
+      const sysCode = safeGetValue(row, 'SYS_CODE', 'N/A');
+      const subSysCode = safeGetValue(row, 'SUB_SYS_CODE', 'N/A');
+      const downstreamName = safeGetValue(row, 'DOWNSTREAM_NAME', 'Unknown');
+      const downstreamId = safeGetValue(row, 'DOWNSTREAM_EIM_ID', 'Unknown');
+      const downstreamInfo = safeGetValue(row, 'DOWNSTREAM_INFO', 'N/A');  
+      const gbgf = safeGetValue(row, 'GBGF', '');
 
+      // 应用筛选条件
       if (selectedGbGf !== 'ALL' && gbgf) {
         const gbgfValues = gbgf.replace(/"/g, '').split(',').map(g => g.trim());
         if (!gbgfValues.includes(selectedGbGf)) {
@@ -245,9 +355,9 @@ const DataFlow = () => {
         }
       }
 
-      const sourceTableCount = safeParseInt(row['c']) || 0;
-      const cdpTableCount = safeParseInt(row['Total CDP Table Count']) || 0;
-      const sharedTableCount = safeParseInt(row['Share to Downstream Table Count']) || 0;
+      const sourceTableCount = safeParseInt(safeGetValue(row, 'SOURCE_TABLE_COUNT'));
+      const cdpTableCount = safeParseInt(safeGetValue(row, 'CDP_TABLE_COUNT'));
+      const sharedTableCount = safeParseInt(safeGetValue(row, 'SHARED_TABLE_COUNT'));
 
       let sourceSystemNode = sourceSystemMap.get(sourceSystem);
       if (!sourceSystemNode) {
@@ -291,7 +401,8 @@ const DataFlow = () => {
           tables: 0,
           type: 'downstream',
           details: new Map(),
-          eimId: downstreamId  // 修改为单个eimId而不是Set
+          eimId: downstreamId,  
+          info: downstreamInfo  
         };
         downstreamAppMap.set(downstreamName, downstreamApp);
       } else if (downstreamId !== downstreamApp.eimId) {
@@ -534,7 +645,8 @@ const DataFlow = () => {
         category: 'downstream',
         itemStyle: { color: '#E6A23C' },
         details: node.details,
-        eimId: node.eimId,  // 使用单个eimId
+        eimId: node.eimId,  
+        info: node.info,  
         label: {
           show: true,
           position: 'right',
@@ -596,7 +708,7 @@ const DataFlow = () => {
                   '</table>'
                 );
               });
-              
+
               return tooltip.join('');
             }
 
@@ -681,34 +793,13 @@ const DataFlow = () => {
       categories: [
         { name: 'source' },
         { name: 'cdp' },
-        { name: 'downstream' }
+        { name: 'downstream' },
+        { name: 'info' }  
       ],
       sourceSystemMap,
       downstreamAppMap
     };
   }, [dataFlowData, selectedGbGf, selectedEimId, selectedAppName]);
-
-  const gbgfOptions = useMemo(() => {
-    if (!dataFlowData?.rawData) {
-      return ['ALL'];
-    }
-
-    const gbgfSet = new Set();
-    gbgfSet.add('ALL');  
-
-    dataFlowData.rawData.forEach(row => {
-      if (row['GB/GF']) {
-        const gbgfValues = row['GB/GF'].split(',').map(value => value.trim());
-        gbgfValues.forEach(value => {
-          if (value) {
-            gbgfSet.add(value);
-          }
-        });
-      }
-    });
-
-    return Array.from(gbgfSet).sort();
-  }, [dataFlowData]);
 
   const handleNodeClick = useCallback((params) => {
     if (params.data.category === 'downstream') {
@@ -732,10 +823,15 @@ const DataFlow = () => {
       const topSources = sourceDetails.slice(0, 30);
       const otherSources = sourceDetails.slice(30);
 
+      // 添加源系统节点
       topSources.forEach(source => {
+        const sourceId = source.sourceSystem || `source_${source.sourceId}`;
         nodes.push({
-          name: source.sourceSystem,
-          value: source.tables || 0,  
+          id: sourceId,
+          name: source.sourceSystem || 'Unknown',
+          category: 'source',
+          depth: 0,  // 第一列
+          value: source.tables || 0,
           itemStyle: { color: '#67C23A' },
           tooltip: {
             formatter: () => {
@@ -768,7 +864,7 @@ const DataFlow = () => {
                 '</tr>',
                 '<tr>',
                 '<td style="padding: 4px 8px;">Shared Tables:</td>',
-                `<td style="padding: 4px 8px;">${source.sharedTables.toLocaleString()}</td>`,
+                `<td style="padding: 4px 8px;">${(source.sharedTables || 0).toLocaleString()}</td>`,
                 '</tr>',
                 '</table>'
               ].join('');
@@ -777,19 +873,29 @@ const DataFlow = () => {
         });
 
         links.push({
-          source: source.sourceSystem,
+          source: sourceId,
           target: 'CDP',
-          value: source.sharedTables  
+          value: source.sharedTables || 0,
+          lineStyle: {
+            color: '#67C23A',
+            opacity: 0.6,
+            curveness: 0.3
+          }
         });
       });
 
+      // 添加其他源系统节点
       if (otherSources.length > 0) {
-        const otherSourceTotalTables = otherSources.reduce((sum, sys) => sum + (sys.tables || 0), 0);  
-        const otherSourceSharedTables = otherSources.reduce((sum, sys) => sum + sys.sharedTables, 0);
+        const otherSourceTotalTables = otherSources.reduce((sum, sys) => sum + (sys.tables || 0), 0);
+        const otherSourceSharedTables = otherSources.reduce((sum, sys) => sum + (sys.sharedTables || 0), 0);
+        const otherId = 'Other Sources';
 
         nodes.push({
+          id: otherId,
           name: 'Other Sources',
-          value: otherSourceTotalTables,  
+          category: 'source',
+          depth: 0,  // 第一列
+          value: otherSourceTotalTables,
           itemStyle: { color: '#67C23A' },
           tooltip: {
             formatter: () => {
@@ -829,7 +935,7 @@ const DataFlow = () => {
                   '</tr>',
                   '<tr>',
                   '<td style="padding: 4px 8px;">Shared Tables:</td>',
-                  `<td style="padding: 4px 8px;">${sys.sharedTables.toLocaleString()}</td>`,
+                  `<td style="padding: 4px 8px;">${(sys.sharedTables || 0).toLocaleString()}</td>`,
                   '</tr>',
                   '</table>'
                 );
@@ -841,66 +947,226 @@ const DataFlow = () => {
         });
 
         links.push({
-          source: 'Other Sources',
+          source: otherId,
           target: 'CDP',
-          value: otherSourceSharedTables  
+          value: otherSourceSharedTables,
+          lineStyle: {
+            color: '#67C23A',
+            opacity: 0.6,
+            curveness: 0.3
+          }
         });
       }
 
+      // 添加CDP节点
       nodes.push({
+        id: 'CDP',
         name: 'CDP',
+        category: 'cdp',
+        depth: 1,  // 第二列
+        value: downstreamApp.tables * 2 || 0,
         itemStyle: { color: '#1890ff' },
-        value: downstreamApp.tables * 2,  
-        itemStyle: {
-          borderWidth: 1,
-          borderColor: '#aaa'
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: 'CDP',
+          fontSize: 16,
+          color: '#fff'
         }
       });
 
+      // 添加下游节点
+      const downstreamId = params.data.name || 'downstream';
       nodes.push({
+        id: downstreamId,
         name: params.data.name,
+        category: 'downstream',
+        depth: 2,  // 第三列
+        value: downstreamApp.tables || 0,
         itemStyle: { color: '#E6A23C' },
-        value: downstreamApp.tables,  
+        tooltip: {
+          formatter: () => {
+            return [
+              '<div style="font-weight: bold; margin-bottom: 10px;">Downstream Application Details</div>',
+              '<table style="width:100%; border-collapse: collapse;">',
+              '<tr>',
+              '<td style="padding: 4px 8px;">Application:</td>',
+              `<td style="padding: 4px 8px;">${downstreamApp.name || 'Unknown'}</td>`,
+              '</tr>',
+              '<tr>',
+              '<td style="padding: 4px 8px;">EIM ID:</td>',
+              `<td style="padding: 4px 8px;">${downstreamApp.eimId || 'Unknown'}</td>`,
+              '</tr>',
+              '<tr>',
+              '<td style="padding: 4px 8px;">Total Tables:</td>',
+              `<td style="padding: 4px 8px;">${(downstreamApp.tables || 0).toLocaleString()}</td>`,
+              '</tr>',
+              '</table>'
+            ].join('');
+          }
+        },
+        label: {
+          show: true,
+          position: 'right',
+          formatter: params.data.name
+        }
       });
 
+      // 添加下游信息节点
+      const infoId = `${downstreamId}_info`;
+      nodes.push({
+        id: infoId,
+        name: downstreamApp.info || 'N/A',
+        category: 'info',
+        depth: 3,  // 第四列
+        value: downstreamApp.tables || 0,
+        itemStyle: { color: '#909399' },
+        tooltip: {
+          formatter: () => {
+            return [
+              '<div style="font-weight: bold; margin-bottom: 10px;">Downstream Info Details</div>',
+              '<table style="width:100%; border-collapse: collapse;">',
+              '<tr>',
+              '<td style="padding: 4px 8px;">Info:</td>',
+              `<td style="padding: 4px 8px;">${downstreamApp.info || 'N/A'}</td>`,
+              '</tr>',
+              '<tr>',
+              '<td style="padding: 4px 8px;">Associated Application:</td>',
+              `<td style="padding: 4px 8px;">${downstreamApp.name || 'Unknown'}</td>`,
+              '</tr>',
+              '<tr>',
+              '<td style="padding: 4px 8px;">EIM ID:</td>',
+              `<td style="padding: 4px 8px;">${downstreamApp.eimId || 'Unknown'}</td>`,
+              '</tr>',
+              '</table>'
+            ].join('');
+          }
+        },
+        label: {
+          show: true,
+          position: 'right',
+          formatter: '{b}'
+        }
+      });
+
+      // CDP到下游节点的连接
       links.push({
         source: 'CDP',
-        target: params.data.name,
-        value: downstreamApp.tables
+        target: downstreamId,
+        value: downstreamApp.tables || 0,
+        lineStyle: {
+          color: '#E6A23C',
+          opacity: 0.6,
+          curveness: 0.3
+        }
       });
 
+      // 下游节点到信息节点的连接
+      links.push({
+        source: downstreamId,
+        target: infoId,
+        value: downstreamApp.tables || 0,
+        lineStyle: {
+          color: '#909399',
+          opacity: 0.6,
+          curveness: 0.3
+        }
+      });
+
+      // 设置子图配置
       const subGraphData = {
+        title: {
+          text: viewType === 'main' ? 'Data Flow Overview' : 'Detailed Data Flow',
+          left: 'center',
+          textStyle: {
+            color: '#333'
+          }
+        },
         tooltip: {
           trigger: 'item',
-          triggerOn: 'mousemove'
+          triggerOn: 'mousemove',
+          formatter: (params) => {
+            if (params.dataType === 'node') {
+              return params.data.tooltip?.formatter?.(params) || 
+                     `${params.name}<br/>Tables: ${params.value}`;
+            }
+            return `Tables: ${params.data.value}`;
+          },
+          textStyle: {
+            color: '#333'
+          }
         },
         series: [{
           type: 'sankey',
           emphasis: {
             focus: 'adjacency'
           },
-          nodeWidth: 40,  
-          nodeGap: 30,    
+          nodeWidth: 20,
+          nodeGap: 12,
           layoutIterations: 32,
+          nodeAlign: 'left',
           data: nodes,
           links: links,
-          label: {
-            position: 'inside'  
-          },
-          itemStyle: {
-            borderWidth: 1,
-            borderColor: '#aaa'
-          },
           lineStyle: {
             color: 'source',
             opacity: 0.6,
             curveness: 0.5
+          },
+          levels: [
+            {
+              depth: 0,
+              itemStyle: {
+                color: '#67C23A'
+              },
+              lineStyle: {
+                color: 'source',
+                opacity: 0.6
+              }
+            },
+            {
+              depth: 1,
+              itemStyle: {
+                color: '#409EFF'
+              },
+              lineStyle: {
+                color: 'source',
+                opacity: 0.6
+              }
+            },
+            {
+              depth: 2,
+              itemStyle: {
+                color: '#E6A23C'
+              },
+              lineStyle: {
+                color: 'source',
+                opacity: 0.6
+              }
+            },
+            {
+              depth: 3,
+              itemStyle: {
+                color: '#909399'
+              },
+              lineStyle: {
+                color: 'source',
+                opacity: 0.6
+              }
+            }
+          ],
+          label: {
+            show: true,
+            position: 'right',
+            formatter: '{b}',
+            fontSize: 12,
+            color: '#333'
           }
         }]
       };
 
-      setSubGraphData(subGraphData);
       setViewType('detail');
+      setSelectedNode(params.data);
+      setSubGraphData(subGraphData);
     }
   }, [processedData]);
 
@@ -910,6 +1176,8 @@ const DataFlow = () => {
   }, []);
 
   const getOption = useCallback(() => {
+    console.log('Generating chart option with data:', processedData);
+
     if (!processedData) {
       console.log('No processed data available');
       return {};
@@ -919,8 +1187,7 @@ const DataFlow = () => {
       return subGraphData;
     }
 
-    console.log('Generating chart option with data:', processedData);
-
+    // 主图配置（graph类型）
     return {
       tooltip: {
         trigger: 'item',
@@ -936,6 +1203,9 @@ const DataFlow = () => {
             return `Tables: ${params.data.value}`;
           }
           return '';
+        },
+        textStyle: {
+          color: '#333'
         }
       },
       series: [{
@@ -947,7 +1217,9 @@ const DataFlow = () => {
         roam: true,
         draggable: true,
         label: {
-          show: true
+          show: true,
+          position: 'right',
+          color: '#333'
         },
         edgeSymbol: ['none', 'arrow'],
         edgeSymbolSize: [0, 8],
@@ -996,15 +1268,6 @@ const DataFlow = () => {
       }
     }
   }, [processedData, getOption]);
-
-  const handleGbGfChange = useCallback((event) => {
-    setSelectedGbGf(event.target.value);
-    if (viewType === 'detail') {
-      setViewType('main');
-      setSelectedNode(null);
-      setSubGraphData(null);
-    }
-  }, [viewType]);
 
   const handleFullscreenToggle = () => {
     setIsFullscreen(!isFullscreen);
